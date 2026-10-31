@@ -270,6 +270,50 @@ class TestExamplesValidation(unittest.TestCase):
         self.assertEqual(extracted["bot_warning"], "Tried in 2022 and reverted: 2x slower. See #1901.")
 
 
+class TestCliHelpers(unittest.TestCase):
+    def test_cli_format_madr_markdown(self):
+        """Tests that format_madr_markdown outputs standard MADR structure."""
+        from src.cli import format_madr_markdown
+
+        record = {
+            "decided": "Keep C Parser",
+            "rejected": "Rewrite in Rust",
+            "why": "2x slower on big files",
+            "sources": ["#1832", "#1901"],
+            "verbatim_evidence": "2x slower on big files",
+            "bot_warning": "Tried in 2022 and reverted: 2x slower. See #1901.",
+        }
+        md = format_madr_markdown(record)
+        self.assertIn("# ADR: Keep C Parser", md)
+        self.assertIn("Keep C Parser", md)
+        self.assertIn("Rewrite in Rust", md)
+        self.assertIn("2x slower on big files", md)
+
+    def test_cli_compare_with_git_blame(self):
+        """Tests that compare_with_git_blame contrasts git blame against AetherGit memory."""
+        from src.cli import compare_with_git_blame
+
+        record = {
+            "decided": "Keep C Parser",
+            "rejected": "Rewrite in Rust",
+            "why": "2x slower on big files",
+            "bot_warning": "Tried in 2022 and reverted: 2x slower. See #1901.",
+        }
+        comp = compare_with_git_blame("parser/core.c", 45, record)
+        self.assertIn("standard_git_blame", comp)
+        self.assertIn("aethergit_recovered_memory", comp)
+        self.assertIn("0% architectural memory", comp["standard_git_blame"])
+        self.assertIn("Keep C Parser", comp["aethergit_recovered_memory"])
+
+    def test_cli_verify_examples_pipeline(self):
+        """Tests verify_examples_pipeline programmatic validation."""
+        from src.cli import verify_examples_pipeline
+
+        res = verify_examples_pipeline()
+        self.assertEqual(res["status"], "success")
+        self.assertGreaterEqual(res["scenarios_tested"], 2)
+
+
 # Pytest top-level test discovery compatibility
 def test_pytest_diff_anchor_multiline():
     suite = TestSignalFilterAndDiffAnchor()
@@ -307,6 +351,13 @@ def test_pytest_gemma_model_and_inference():
 def test_pytest_examples_directory_valid():
     suite = TestExamplesValidation()
     suite.test_examples_directory_exists_and_valid()
+
+
+def test_pytest_cli_helpers():
+    suite = TestCliHelpers()
+    suite.test_cli_format_madr_markdown()
+    suite.test_cli_compare_with_git_blame()
+    suite.test_cli_verify_examples_pipeline()
 
 
 if __name__ == "__main__":
