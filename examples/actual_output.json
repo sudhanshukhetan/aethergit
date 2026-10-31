@@ -19,7 +19,7 @@
         "rejected_alternatives_detailed": [
           {
             "alternative": "Rewrite in Rust (PR #1901)",
-            "reason_rejected": "Benchmark showed 2x slower throughput on 50MB+ token streams due to FFI boundary overhead."
+            "reason_rejected": "Benchmark showed 2x slower throughput on big files compared to the C parser."
           }
         ],
         "bot_warning": "Tried in 2022 and reverted: 2x slower. See #1901."
@@ -52,8 +52,7 @@
         "why": "Variable leaking created subtle bugs and shadowed outer variables unexpectedly.",
         "sources": [
           "discuss.python.org",
-          "PEP-572-thread",
-          "#thread-4821"
+          "#pep-scoping"
         ],
         "verbatim_evidence": "leaking comprehension variables creates subtle bugs and shadows outer variables",
         "rejected_alternatives_detailed": [
@@ -78,10 +77,10 @@
         "reason": "Traceability verified: verbatim quote match found in discuss.python.org thread."
       },
       "identity_graph": {
-        "canonical_name": "Guido van Rossum",
-        "github": "gvanrossum",
-        "email": "guido@python.org",
-        "forum_handle": "Guido van Rossum"
+        "canonical_name": "Demo User",
+        "github": "demo_user",
+        "email": "demo@example.com — fictional example",
+        "forum_handle": "Demo User"
       }
     },
     {

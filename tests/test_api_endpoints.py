@@ -62,11 +62,26 @@ class TestApiEndpoints(unittest.TestCase):
 
     def test_post_api_check_pr(self):
         """POST /api/check-pr must detect architectural regression on critical anchors."""
+        # Regression PR inside anchor range
         res = self.client.post("/api/check-pr", json={"pr_title": "rewrite in rust", "slider_val": 45})
         self.assertEqual(res.status_code, 200)
         data = res.get_json()
         self.assertTrue(data.get("is_regression"))
         self.assertTrue(data.get("touches_anchor"))
+
+        # Innocent PR inside anchor range (should NOT be marked regression)
+        res_innocent = self.client.post("/api/check-pr", json={"pr_title": "Fix typo in README", "slider_val": 45})
+        self.assertEqual(res_innocent.status_code, 200)
+        data_innocent = res_innocent.get_json()
+        self.assertFalse(data_innocent.get("is_regression"))
+        self.assertTrue(data_innocent.get("touches_anchor"))
+
+        # PR outside anchor range (e.g. line 130)
+        res_outside = self.client.post("/api/check-pr", json={"pr_title": "rewrite in rust", "slider_val": 130})
+        self.assertEqual(res_outside.status_code, 200)
+        data_outside = res_outside.get_json()
+        self.assertFalse(data_outside.get("is_regression"))
+        self.assertFalse(data_outside.get("touches_anchor"))
 
 
 if __name__ == "__main__":

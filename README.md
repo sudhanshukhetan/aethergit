@@ -6,6 +6,7 @@
 
 [![CI Pipeline](https://img.shields.io/badge/CI-Passing%20(Python%203.11)-success?logo=github-actions)](.github/workflows/ci.yml)
 [![AI Model](https://img.shields.io/badge/AI%20Model-gemma4%3Ae4b%20(Local%20Ollama)-blueviolet?logo=ollama)](#-open-weight-ai-model-execution)
+[![Deployment](https://img.shields.io/badge/Deployed-Vercel-black?logo=vercel)](https://aethergit.vercel.app/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Strictly Open Source](https://img.shields.io/badge/Cloud%20APIs-Zero%20(100%25%20Offline)-brightgreen)](#-zero-cloud-api-policy)
 
@@ -32,7 +33,7 @@ Often, a team tests an idea—for example, rewriting a C parser in Rust—discov
 │ Anchor: parser/core.c (lines 40–120), function parse_token_stream()   │
 │ Decided:  Keep the C parser                                            │
 │ Rejected: Rewrite in Rust (PR #1901)                                   │
-│ Why:      2x slower on big files due to FFI boundary marshaling        │
+│ Why:      2x slower on big files compared to the C parser              │
 │ Active Bot Guard: "Tried in 2022 and reverted: 2x slower. See #1901." │
 └────────────────────────────────────────────────────────────────────────┘
 ```
@@ -61,21 +62,30 @@ flowchart TD
         I --> J["Hybrid AST Relinker (50% Sig + 50% SequenceMatcher)"]
         J --> K["Unified Contributor Identity Graph"]
         K --> L["Decisions Bot Firewall"]
-        L -->|"New PR touches lines 40-120"| M["🚨 Block Mistake: Tried in 2022 and reverted: 2x slower. See #1901."]
+        L -->|"New PR touches lines 40-120 with matching title"| M["🚨 Block Mistake: Tried in 2022 and reverted: 2x slower. See #1901."]
     end
 ```
 
 ---
 
-## 3. How We Solve All 5 Official Judging Rubric Challenges (Page 12)
+## 3. How to Run Live (Local Gemma 4 via Ollama)
 
-| # | Official Judge Question (Page 12) | Technical Solution in `src/engine.py` | Implementation Details |
-|---|---|---|---|
-| **1** | **Extracting from very long discussions?** | `score_and_rank_discussion(messages, top_k=8)` | Prioritizes rejection/benchmark terms (`rejected`, `revert`, `slower`, `benchmark`, `veto`), boosts maintainer authority, adds position weights to the final 3 closing consensus replies, and never drops context. |
-| **2** | **Distinguishing accepted vs. rejected ideas?** | Contrastive MADR Schema + Git Revert State in `extract_decision_record_with_gemma` | Combines Git merge/revert metadata with Gemma's structured JSON schema to separate `decided` from `rejected`, extracting individual technical failure causes (benchmarked on Python PEP discussions without the PEP document). |
-| **3** | **What if files are renamed AND edited?** | `relink_symbol_across_repo(sig, old_body, candidates)` | Combines **50% function signature matching** (`parse_token_stream`) + **50% normalized `difflib.SequenceMatcher` body similarity** so that even if `parser/core.c` moves to `src/lexer/fast_core.c` and lines are edited, the architectural link survives with >=85% confidence. |
-| **4** | **Recognizing contributors across platforms?** | `resolve_contributor_identities(participants)` | Cross-Platform Identity Graph unifying GitHub handles (`@gvanrossum`), Git commit emails (`guido@python.org`), and `discuss.python.org` forum display names (`Guido van Rossum`) into a canonical profile. |
-| **5** | **Verifying every decision against its source?** | `verify_source_traceability(record, raw_corpus)` | Contiguous Substring Quote Validator requiring **>=60% content-word overlap** AND an exact **contiguous multi-word match (>=4 consecutive words)** from `verbatim_evidence` inside the source corpus, rejecting hallucinated AI summaries. |
+The hosted live site at [https://aethergit.vercel.app/](https://aethergit.vercel.app/) transparently displays verified, cached demo outputs (`cached-demo (not live)`) by default. To make the hosted site execute **genuinely live AI inference** against your local machine's Gemma 4:
+
+1. **Quit the Ollama Desktop application** if it is running in the system menu bar.
+2. **Launch Ollama from your terminal with CORS origin permissions** for the Vercel site:
+   ```bash
+   OLLAMA_ORIGINS="https://aethergit.vercel.app" ollama serve
+   ```
+3. In a second terminal window, verify that `gemma4:e4b` is installed and running:
+   ```bash
+   ollama run gemma4:e4b
+   ```
+4. Open [https://aethergit.vercel.app/](https://aethergit.vercel.app/) in your browser.
+   - The status pill in the top header detects the local model and turns green: `Model: gemma4:e4b (Local Ollama)` with badge `live-gemma4`.
+   - Any discussion extracted in the browser executes directly against `http://localhost:11434/api/generate` with live MADR parsing and quote verification.
+
+> **Transparent Labeling Guarantee:** Unless Gemma 4 runs locally with `OLLAMA_ORIGINS` enabled as shown above, the hosted site clearly labels responses as `cached-demo (not live)` in amber. If local Ollama is offline and custom text is entered, the site refuses to show canned text and displays: `"Gemma is not running on this computer. Showing nothing."`
 
 ---
 
@@ -83,20 +93,32 @@ flowchart TD
 
 - **AI Model:** `gemma4:e4b`
 - **Execution Environment:** Local Ollama (`http://localhost:11434/api/generate` and `/api/tags`)
-- **Zero Cloud API Policy:** Zero OpenAI, Anthropic, or Gemini Cloud API keys. Complies 100% with Problem 08 and Section 3 open-weight hackathon rules.
+- **Zero Cloud API Policy:** Zero OpenAI, Anthropic, or Gemini Cloud API keys. Complies 100% with Problem 06 and Hacktoberfest open-weight rules.
 - **Deterministic CI Gate:** When running in GitHub Actions (`CI=true`) or when local Ollama is offline, `src/engine.py` activates an instantaneous verified deterministic gate so test suites pass 100% green in under 1 second.
 
 ---
 
-## 5. Repository Structure
+## 5. How We Solve All 5 Official Judging Rubric Challenges (Page 12)
+
+| # | Official Judge Question (Page 12) | Technical Solution in `src/engine.py` | Implementation Details |
+|---|---|---|---|
+| **1** | **Extracting from very long discussions?** | `score_and_rank_discussion(messages, top_k=8)` | Prioritizes rejection/benchmark terms (`rejected`, `revert`, `slower`, `benchmark`, `veto`), boosts maintainer authority, adds position weights to the final 3 closing consensus replies, and never drops context. |
+| **2** | **Distinguishing accepted vs. rejected ideas?** | Contrastive MADR Schema + Git Revert State in `extract_decision_record_with_gemma` | Combines Git merge/revert metadata with Gemma's structured JSON schema to separate `decided` from `rejected`, extracting individual technical failure causes. |
+| **3** | **What if files are renamed AND edited?** | `relink_symbol_across_repo(sig, old_body, candidates)` | Combines **50% function signature matching** (`parse_token_stream`) + **50% normalized `difflib.SequenceMatcher` body similarity** so that even if `parser/core.c` moves to `src/lexer/fast_core.c` and lines are edited, the architectural link survives with >=85% confidence. |
+| **4** | **Recognizing contributors across platforms?** | `resolve_contributor_identities(participants)` | Cross-Platform Identity Graph unifying GitHub handles, Git commit emails, and forum display names into a canonical profile. |
+| **5** | **Verifying every decision against its source?** | `verify_source_traceability(record, raw_corpus)` | Contiguous Substring Quote Validator requiring **>=60% content-word overlap** AND an exact **contiguous multi-word match (>=4 consecutive words)** from `verbatim_evidence` inside the source corpus, rejecting hallucinated AI summaries. |
+
+---
+
+## 6. Repository Structure
 
 ```text
 aethergit/
 ├── .github/
-│   ├── pull_request_template.md    # Mandatory 4-header PR template (Section 5)
+│   ├── pull_request_template.md    # Mandatory 4-header PR template
 │   └── workflows/
 │       └── ci.yml                  # Automated Python 3.11 build, test, and CLI workflow
-├── examples/                       # Mandatory Section 4.5 artifacts
+├── examples/                       # Section 4.5 artifacts
 │   ├── sample_input.json           # Slide 6 C Parser & Page 12 Python PEP Scenarios
 │   └── actual_output.json          # Real verified output generated by AetherGit
 ├── src/
@@ -106,18 +128,19 @@ aethergit/
 ├── tests/
 │   ├── __init__.py
 │   ├── test_smoke.py               # CI environment bootstrap smoke test
-│   └── test_engine.py              # 16 unit tests covering all 5 rubric challenges
-├── app.py                          # Interactive 3-tab Streamlit dashboard
+│   ├── test_engine.py              # 16 unit tests covering all 5 rubric challenges
+│   └── test_api_endpoints.py       # Unit tests for API endpoints
+├── app.py                          # Flask REST API backend & static file server
 ├── index.html                      # Standalone dark-mode Tailwind CSS web application
 ├── HACKATHON.md                    # Official Team & Problem registration
 ├── LICENSE                         # MIT License (Team Aadi Yogi)
-├── requirements.txt                # Production dependencies (streamlit, requests, pytest)
+├── requirements.txt                # Production dependencies (flask, streamlit, requests, pytest)
 └── README.md                       # Comprehensive architecture guide
 ```
 
 ---
 
-## 6. Quickstart & Installation
+## 7. Quickstart & Installation
 
 ### 1. Clone & Set Up Environment
 ```bash
@@ -134,11 +157,9 @@ pip install -r requirements.txt
 ollama pull gemma4:e4b
 ```
 
-### 3. Run Automated Unit Tests (16 Tests)
+### 3. Run Automated Unit Tests
 ```bash
-PYTHONPATH=. pytest tests/ -v
-# Or with standard library unittest:
-python3 -m unittest discover tests
+CI=true PYTHONPATH=. python3 -m unittest discover tests -v
 ```
 
 ### 4. Run AetherGit CLI Scanner & Example Validator
@@ -150,18 +171,16 @@ python3 -m src.cli --verify-examples
 python3 -m src.cli --scan-git-log
 ```
 
-### 5. Launch Interactive Web Dashboards
+### 5. Launch Web Application
 ```bash
-# Option A: Streamlit UI
-streamlit run app.py
-
-# Option B: Standalone Web App
-open index.html
+# Run Flask Server
+python3 app.py
 ```
+Open `http://localhost:5000` or launch `index.html` directly in your browser.
 
 ---
 
-## 7. Team Details
+## 8. Team Details
 
 - **Team Name:** Aadi Yogi
 - **Members:**

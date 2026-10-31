@@ -237,9 +237,9 @@ def api_relink():
     relink_match = relink_symbol_across_repo(symbol, old_body, candidates)
 
     raw_participants = data.get("participants") or [
-        {"github": "gvanrossum", "email": "guido@python.org"},
-        {"forum_name": "Guido van Rossum", "email": "guido@python.org"},
-        "Guido van Rossum <guido@python.org> (@gvanrossum)",
+        {"github": "demo_user", "email": "demo@example.com", "name": "Demo User"},
+        {"forum_name": "Demo User", "email": "demo@example.com"},
+        "Demo User <demo@example.com> (@demo_user)",
     ]
     resolved_id = resolve_contributor_identities(raw_participants)
 

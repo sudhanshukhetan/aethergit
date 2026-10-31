@@ -47,16 +47,16 @@
       <p class="text-xs text-slate-400 mt-1">Open Source Decision Intelligence &amp; Knowledge Recovery · Powered by local <code class="text-emerald-400 font-mono">gemma4:e4b</code></p>
     </div>
     <div class="flex items-center gap-3">
-      <!-- Bug #2: Unwired Header Button Wired to checkOllamaStatus(true) -->
+      <!-- Test Local AI Button -->
       <button id="api-test-btn" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1.5 cursor-pointer">
         <span>⚡</span> Test Local AI
       </button>
 
-      <!-- Ollama Live Status Pill -->
+      <!-- Ollama Live Status Pill: Starts grey Checking…, green only if gemma4:e4b is online -->
       <div id="ollama-status" class="flex items-center gap-2 text-xs bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
-        <span id="ollama-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span id="ollama-text" class="text-slate-300">Model: <strong class="text-white">gemma4:e4b</strong> (Active)</span>
-        <span id="header-source-badge" class="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-900 text-slate-300 border border-slate-700">cached-demo</span>
+        <span id="ollama-dot" class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+        <span id="ollama-text" class="text-slate-300">Checking…</span>
+        <span id="header-source-badge" class="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-amber-950 text-amber-300 border border-amber-700">cached-demo (not live)</span>
       </div>
     </div>
   </header>
@@ -78,7 +78,6 @@
     </div>
 
     <!-- TAB 1: SLIDE 6 FLOW (Active by default) -->
-    <!-- Bug #10: Responsive grid classes grid-cols-1 lg:grid-cols-3 -->
     <div id="slide6" class="space-y-6">
       <div class="bg-slate-900/40 border border-slate-800 p-4 rounded-xl">
         <h2 class="text-lg font-semibold text-white">The Real-World Architectural Memory Problem (Slide 6 &amp; Blueprint)</h2>
@@ -98,7 +97,7 @@
             <div class="space-y-3 text-xs">
               <div class="bg-slate-950 p-3 rounded-lg border border-slate-800/80">
                 <span class="text-slate-500 font-mono">Issue #1832 (Key Excerpt):</span>
-                <p class="mt-1 text-slate-300"><strong>@bench_bot:</strong> Benchmark completed: Rust rewrite was <strong>2x slower on big files</strong> compared to the C parser due to FFI boundary marshaling.</p>
+                <p class="mt-1 text-slate-300"><strong>@bench_bot:</strong> Benchmark completed: Rust rewrite was <strong>2x slower on big files</strong> compared to the C parser.</p>
                 <p class="mt-1 text-slate-300"><strong>@maintainer_lead:</strong> Consensus reached: Keep the C parser. Reverting #1901.</p>
               </div>
 
@@ -117,7 +116,6 @@
             </div>
           </div>
 
-          <!-- Bug #3: extract-decision-record-btn with valid JS strings -->
           <button id="extract-decision-record-btn" onclick="extractSlide6()" class="mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 px-4 rounded-lg text-xs transition flex items-center justify-center gap-2 cursor-pointer">
             <span>⚡</span> Extract with gemma4:e4b
           </button>
@@ -128,7 +126,7 @@
           <div class="flex items-center justify-between">
             <h3 class="font-bold text-sm text-slate-200">2. Recovered Architectural Memory</h3>
             <div class="flex items-center gap-2">
-              <span id="madr-source-badge" class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-800 text-slate-300 border border-slate-700">cached-demo</span>
+              <span id="madr-source-badge" class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-amber-950 text-amber-300 border border-amber-700">cached-demo (not live)</span>
               <span class="bg-emerald-950 text-emerald-400 border border-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded">MADR FORMAT</span>
             </div>
           </div>
@@ -148,12 +146,12 @@
               <p class="text-slate-500 font-mono text-[11px]">AST Symbol Anchor: <code>parse_token_stream()</code> (lines 40–120)</p>
             </div>
 
-            <div class="p-3 bg-emerald-950/40 border border-emerald-800/80 rounded-lg">
+            <div id="c-quote-container" class="p-3 bg-emerald-950/40 border border-emerald-800/80 rounded-lg">
               <div class="flex items-center gap-1.5 text-emerald-300 font-semibold text-xs">
                 <span>🛡️</span> Contiguous Quote Verification (Challenge #5)
               </div>
               <p id="c-quote-text" class="text-emerald-200/90 italic text-[11px] mt-1">"2x slower on big files compared to the C parser"</p>
-              <div class="flex items-center gap-3 mt-2 text-[10px] text-emerald-400">
+              <div id="c-quote-badge" class="flex items-center gap-3 mt-2 text-[10px] text-emerald-400">
                 <span>✓ Contiguous Match: <strong id="c-contiguous-match">TRUE</strong></span>
                 <span>Word Overlap: <strong id="c-word-overlap">100%</strong></span>
               </div>
@@ -195,18 +193,17 @@
                   <span>Modified Line Number:</span>
                   <div class="flex items-center gap-2">
                     <label for="line-input" class="text-slate-400 text-xs">Line:</label>
-                    <input id="line-input" type="number" min="1" max="500" value="45" oninput="onLineInputChange(this.value)" class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-center font-mono text-blue-400 text-xs focus:ring-1 focus:ring-blue-500 outline-none">
+                    <input id="line-input" type="number" min="1" max="300" value="45" oninput="onLineInputChange(this.value)" onblur="onLineInputBlur(this)" class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-center font-mono text-blue-400 text-xs focus:ring-1 focus:ring-blue-500 outline-none">
                     <span id="line-display" class="font-mono text-blue-400 text-[11px]">(Span 40–120)</span>
                   </div>
                 </div>
-                <!-- Range slider synchronized with input -->
+                <!-- Range slider synchronized with input (1 to 300) -->
                 <input id="line-slider" type="range" min="1" max="300" value="45" oninput="onLineSliderChange(this.value)" class="w-full accent-blue-500 cursor-pointer">
               </div>
 
-              <!-- Bug #5 & Bug #6: Decisions Bot Alert with Unclipped SVG Warning Circle Icon -->
+              <!-- Decisions Bot Alert with Unclipped SVG Warning Circle Icon -->
               <div id="decisions-bot-alert" class="bot-alert-anim bg-red-950 border-2 border-red-500 rounded-lg p-3 text-red-200 space-y-1.5">
                 <div class="flex items-center gap-1.5 font-bold text-red-300">
-                  <!-- Bug #6: Exact unclipped SVG path -->
                   <svg class="w-4 h-4 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
@@ -216,16 +213,16 @@
                 <div class="text-[10px] text-red-400/90 leading-tight">
                   • Anchored Function: <code>parse_token_stream()</code> (lines 40–120)<br/>
                   • Rejected Mistake: Rewrite in Rust (PR #1901 was 2x slower)<br/>
-                  • Regression Confidence: <strong id="bot-confidence-display">95%</strong>
+                  • Regression Guard: <strong id="bot-confidence-display" class="text-red-300">Active (Keyword &amp; Anchor Match)</strong>
                 </div>
               </div>
 
-              <!-- Safe Line Range Banner (Visible when slider moved outside lines 40-120) -->
+              <!-- Safe Line Range Banner (Visible when safe) -->
               <div id="safe-range-banner" class="hidden bg-emerald-950/60 border border-emerald-700/80 rounded-lg p-3 text-emerald-200">
                 <div class="flex items-center gap-1.5 font-bold text-emerald-300 text-xs">
                   <span>✅</span> Safe Line Range - No Architectural Regression
                 </div>
-                <p class="text-[11px] text-emerald-400/80 mt-1">Changes are outside the critical architectural anchor range (lines 40–120). No historical mistakes repeated.</p>
+                <p class="text-[11px] text-emerald-400/80 mt-1">Changes are outside the critical architectural anchor range (lines 40–120) or title does not match rejected alternatives.</p>
               </div>
 
             </div>
@@ -236,7 +233,6 @@
     </div>
 
     <!-- TAB 2: PYTHON PEP SCENARIO -->
-    <!-- Bug #1: hidden class on initial load; Bug #10: responsive md:grid-cols-2 -->
     <div id="pep_evaluator" class="hidden space-y-6">
       <div class="bg-slate-900/40 border border-slate-800 p-4 rounded-xl">
         <h2 class="text-lg font-semibold text-white">Official Page 12 Evaluation Scenario: Python PEP Scoping Recovery</h2>
@@ -253,7 +249,6 @@ Core developers rejected retaining variable leakage because leaking comprehensio
 The consensus decided that comprehension iteration variables have localized inner scope in Python 3.
 All alternative proposals to leak loop variables or dynamically bind them were firmly rejected.</textarea>
           
-          <!-- Bug #3: run-pep-extraction button with valid JS strings -->
           <button id="run-pep-extraction" onclick="extractPEP()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 px-4 rounded-lg text-xs transition flex items-center justify-center gap-2 cursor-pointer">
             <span>⚡</span> Recover Decisions with gemma4:e4b
           </button>
@@ -262,7 +257,7 @@ All alternative proposals to leak loop variables or dynamically bind them were f
         <div id="pep-output-container" class="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-4">
           <div class="flex items-center justify-between">
             <h3 class="font-bold text-sm text-slate-200">Recovered Architectural Consensus</h3>
-            <span id="pep-source-badge" class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-800 text-slate-300 border border-slate-700">cached-demo</span>
+            <span id="pep-source-badge" class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-amber-950 text-amber-300 border border-amber-700">cached-demo (not live)</span>
           </div>
           <div id="pep-results-display" class="p-4 bg-slate-950 rounded-lg border border-slate-800 space-y-2 text-xs">
             <p><strong>DECIDED:</strong> <span class="text-emerald-400 font-semibold">Comprehension iteration variables have localized inner scope in Python 3</span></p>
@@ -278,7 +273,6 @@ All alternative proposals to leak loop variables or dynamically bind them were f
     </div>
 
     <!-- TAB 3: RENAME RELINKER & IDENTITY GRAPH -->
-    <!-- Bug #1: hidden class on initial load; Bug #10: responsive md:grid-cols-2 -->
     <div id="identity_resolver" class="hidden space-y-6">
       <div class="bg-slate-900/40 border border-slate-800 p-4 rounded-xl">
         <h2 class="text-lg font-semibold text-white">Problem 06 Technical Considerations #3 &amp; #4</h2>
@@ -301,8 +295,8 @@ All alternative proposals to leak loop variables or dynamically bind them were f
             <div class="font-bold flex items-center gap-1.5">
               <span>✅</span> Relink Successful!
             </div>
-            <div>Overall Confidence: <strong id="relink-confidence-score">88.5%</strong> (Threshold &gt;= 60%)</div>
-            <div class="text-[11px] text-emerald-400/80">• Signature Match: <span id="relink-sig-score">100%</span> (Weight: 50%)<br/>• SequenceMatcher Ratio: <span id="relink-ratio-score">77.0%</span> (Weight: 50%)</div>
+            <div>Overall Confidence: <strong id="relink-confidence-score">98.5%</strong> (Threshold &gt;= 60%)</div>
+            <div class="text-[11px] text-emerald-400/80">• Signature Match: <span id="relink-sig-score">100%</span> (Weight: 50%)<br/>• SequenceMatcher Ratio: <span id="relink-ratio-score">97.1%</span> (Weight: 50%)</div>
           </div>
 
           <button id="run-relink-btn" onclick="runRelink()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 px-4 rounded-lg text-xs transition flex items-center justify-center gap-2 cursor-pointer">
@@ -310,37 +304,37 @@ All alternative proposals to leak loop variables or dynamically bind them were f
           </button>
         </div>
 
-        <!-- Identity: Bug #9 Resolved Canonical Profile Name -->
+        <!-- Identity Resolver -->
         <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-3">
           <h3 class="font-bold text-sm text-slate-200">Consideration #4: Cross-Platform Contributor Graph</h3>
           <p class="text-xs text-slate-400">Unifies GitHub handles, commit emails, and discuss forum display names into single canonical profiles.</p>
 
           <div id="contributor-profile-card" class="bg-slate-950 p-3 rounded-lg border border-slate-800 text-xs space-y-3">
-            <!-- Profile 1: Guido van Rossum -->
+            <!-- Profile 1: Fictional Demo User -->
             <div class="space-y-1.5">
               <div class="flex items-center gap-2">
-                <span class="w-8 h-8 rounded-full bg-blue-700 flex items-center justify-center font-bold text-white text-xs shrink-0">GVR</span>
+                <span class="w-8 h-8 rounded-full bg-blue-700 flex items-center justify-center font-bold text-white text-xs shrink-0">DU</span>
                 <div>
-                  <div class="font-bold text-slate-200">Guido van Rossum (@gvanrossum)</div>
-                  <div class="text-[11px] text-slate-400 font-mono">guido@python.org · discuss.python.org</div>
+                  <div class="font-bold text-slate-200">Demo User (@demo_user)</div>
+                  <div class="text-[11px] text-slate-400 font-mono">demo@example.com — fictional example · discuss.python.org</div>
                 </div>
               </div>
               <div class="pt-1 text-[11px] text-slate-400">
-                Unified Aliases: <code>@gvanrossum</code>, <code>guido@python.org</code>, <code>Guido van Rossum (discuss.python.org)</code>
+                Unified Aliases: <code>@demo_user</code>, <code>demo@example.com</code>, <code>Demo User (discuss.python.org)</code>
               </div>
             </div>
 
-            <!-- Profile 2: Victor Stinner -->
+            <!-- Profile 2: Fictional Contributor -->
             <div class="pt-2 border-t border-slate-800 space-y-1.5">
               <div class="flex items-center gap-2">
-                <span class="w-8 h-8 rounded-full bg-purple-700 flex items-center justify-center font-bold text-white text-xs shrink-0">VS</span>
+                <span class="w-8 h-8 rounded-full bg-purple-700 flex items-center justify-center font-bold text-white text-xs shrink-0">FC</span>
                 <div>
-                  <div class="font-bold text-slate-200">Victor Stinner (@vstinner)</div>
-                  <div class="text-[11px] text-slate-400 font-mono">vstinner@python.org · discuss.python.org</div>
+                  <div class="font-bold text-slate-200">Fictional Contributor (@fictional_dev)</div>
+                  <div class="text-[11px] text-slate-400 font-mono">contributor@example.com — fictional example · discuss.python.org</div>
                 </div>
               </div>
               <div class="pt-1 text-[11px] text-slate-400">
-                Unified Aliases: <code>@vstinner</code>, <code>vstinner@python.org</code>, <code>Victor Stinner (discuss.python.org)</code>
+                Unified Aliases: <code>@fictional_dev</code>, <code>contributor@example.com</code>, <code>Fictional Contributor (discuss.python.org)</code>
               </div>
             </div>
           </div>
@@ -356,7 +350,6 @@ All alternative proposals to leak loop variables or dynamically bind them were f
 
   <!-- Interactive JavaScript logic -->
   <script>
-    // Bug #7: Non-blocking inline toast banner
     // Cached demo output loaded directly from examples/actual_output.json
     const CACHED_ACTUAL_OUTPUT = {
       slide_6_c_parser: {
@@ -390,7 +383,7 @@ All alternative proposals to leak loop variables or dynamically bind them were f
           decided: "Comprehension iteration variables have localized inner scope in Python 3",
           rejected: "Leaking comprehension variables into enclosing function or module namespace",
           why: "Variable leaking created subtle bugs and shadowed outer variables unexpectedly.",
-          sources: ["discuss.python.org", "PEP-572-thread", "#thread-4821"],
+          sources: ["discuss.python.org", "#pep-scoping"],
           verbatim_evidence: "leaking comprehension variables creates subtle bugs and shadows outer variables",
           bot_warning: "Warning: Historical consensus established localized comprehension scoping to prevent variable leakage."
         },
@@ -407,6 +400,15 @@ All alternative proposals to leak loop variables or dynamically bind them were f
         }
       }
     };
+
+    const DEFAULT_PEP_TEXT = `Discussion Thread on Comprehension Scoping (discuss.python.org):
+In Python 2, list comprehension variables leaked into the outer function scope.
+Several developers proposed retaining Python 2 variable leaking behavior for backward compatibility.
+Core developers rejected retaining variable leakage because leaking comprehension variables creates subtle bugs and shadows outer variables unpredictably.
+The consensus decided that comprehension iteration variables have localized inner scope in Python 3.
+All alternative proposals to leak loop variables or dynamically bind them were firmly rejected.`;
+
+    let currentValidLine = 45;
 
     // Non-blocking inline toast banner
     function showToast(message, type = 'info') {
@@ -470,6 +472,7 @@ All alternative proposals to leak loop variables or dynamically bind them were f
     }
 
     // Helper: Update source badge in UI
+    // Requirement 1: Only "live-gemma4" is green; hosted /api is ALWAYS "cached-demo (not live)" in amber
     function updateBadge(badgeId, source) {
       const el = document.getElementById(badgeId);
       if (!el) return;
@@ -477,12 +480,12 @@ All alternative proposals to leak loop variables or dynamically bind them were f
         el.className = 'px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-950 text-emerald-300 border border-emerald-700';
         el.textContent = 'live-gemma4';
       } else {
-        el.className = 'px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-800 text-slate-300 border border-slate-700';
-        el.textContent = 'cached-demo';
+        el.className = 'px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-amber-950 text-amber-300 border border-amber-700';
+        el.textContent = 'cached-demo (not live)';
       }
     }
 
-    // Bug #2: Fetch wrapper helper with 4s AbortController timeout & cached fallback
+    // Hosted API Fetch wrapper: hosted responses are ALWAYS marked "cached-demo", never "live-gemma4"
     async function fetchWithFallback(url, options = {}, scenarioKey = null, timeoutMs = 4000) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -492,12 +495,12 @@ All alternative proposals to leak loop variables or dynamically bind them were f
         clearTimeout(timeoutId);
         if (res.ok) {
           const data = await res.json();
-          data._source = 'live-gemma4';
+          // Hosted /api endpoints return canned answers, so label them cached-demo
+          data._source = 'cached-demo';
           return data;
         }
       } catch (err) {
         clearTimeout(timeoutId);
-        // Silently swallow fetch/timeout error on deployed Vercel without console errors
       }
 
       // Return cached fallback matching examples/actual_output.json
@@ -516,20 +519,104 @@ All alternative proposals to leak loop variables or dynamically bind them were f
       };
     }
 
-    // Bug #1: PR Firewall logic checkPR(line)
-    function checkPR(line) {
+    // Direct browser call to local Ollama (Requirement 1)
+    // Model: gemma4:e4b, stream: false, NO format option, prompt asks for JSON {decided, rejected, reason, quote, file}
+    // Parses first {...} block, timeout: 180s
+    async function callLocalOllama(discussionText, timeoutMs = 180000) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+      const prompt = `You are an architectural knowledge recovery tool. Read the following discussion text carefully and extract the architectural decision. Use ONLY information present in the text. Return a JSON object with keys:
+{
+  "decided": "what architectural decision was accepted or kept",
+  "rejected": "what alternative idea was rejected or reverted",
+  "reason": "the technical reason why the alternative was rejected",
+  "quote": "verbatim quote from the text stating the reason",
+  "file": "source file path mentioned, or empty string"
+}
+
+Discussion text:
+${discussionText}
+
+JSON response:`;
+
+      const res = await fetch('http://localhost:11434/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'gemma4:e4b',
+          prompt: prompt,
+          stream: false
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        throw new Error(`Ollama returned status ${res.status}`);
+      }
+
+      const data = await res.json();
+      const rawText = data.response || '';
+      const firstBrace = rawText.indexOf('{');
+      const lastBrace = rawText.lastIndexOf('}');
+      if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+        throw new Error('No valid JSON block found in Ollama response');
+      }
+
+      const parsed = JSON.parse(rawText.substring(firstBrace, lastBrace + 1));
+      return {
+        decided: parsed.decided || 'Keep existing implementation',
+        rejected: parsed.rejected || 'Alternative proposal',
+        why: parsed.reason || parsed.why || '',
+        verbatim_evidence: parsed.quote || parsed.verbatim_evidence || '',
+        code_anchor: {
+          file: parsed.file || 'parser/core.c',
+          line_range: [40, 120],
+          function_symbol: 'parse_token_stream'
+        },
+        _source: 'live-gemma4'
+      };
+    }
+
+    // PR Firewall logic checkPR(line, prTitle, rejectedText) - Requirement 4
+    function checkPR(line, prTitle = '', rejectedText = 'Rewrite in Rust') {
       const lineNum = parseInt(line, 10);
-      if (!isNaN(lineNum) && lineNum >= 40 && lineNum <= 120) {
+      if (isNaN(lineNum) || lineNum < 40 || lineNum > 120) {
+        return {
+          status: 'SAFE',
+          message: 'Safe Line Range - No Architectural Regression'
+        };
+      }
+
+      // Extract whole words longer than 3 letters
+      const extractWords = (str) => {
+        const matches = (str || '').toLowerCase().match(/\b[a-z]{4,}\b/g);
+        return new Set(matches || []);
+      };
+
+      const rejWords = extractWords(rejectedText);
+      const titleWords = extractWords(prTitle);
+
+      let sharedWord = null;
+      for (const w of titleWords) {
+        if (rejWords.has(w)) {
+          sharedWord = w;
+          break;
+        }
+      }
+
+      if (sharedWord) {
         return {
           status: 'BLOCK',
           message: 'Tried in 2022 and reverted: 2x slower. See #1901.',
-          confidence: 95
+          matchedWord: sharedWord
         };
       }
+
       return {
         status: 'SAFE',
-        message: 'Safe Line Range - No Architectural Regression',
-        confidence: 100
+        message: 'Safe Line Range - No Architectural Regression'
       };
     }
     window.checkPR = checkPR;
@@ -540,39 +627,36 @@ All alternative proposals to leak loop variables or dynamically bind them were f
       const displaySpan = document.getElementById('line-display');
       const alertBox = document.getElementById('decisions-bot-alert');
       const safeBox = document.getElementById('safe-range-banner');
-      const confSpan = document.getElementById('bot-confidence-display');
+      const intentInput = document.getElementById('pr-intent');
+      const prTitle = intentInput ? intentInput.value : '';
 
-      if (!alertBox || !safeBox) return;
-
-      let currentLine = 45;
-      if (lineVal !== undefined && lineVal !== null && String(lineVal).trim() !== '') {
-        currentLine = parseInt(lineVal, 10);
-      } else if (lineInput && lineInput.value) {
-        currentLine = parseInt(lineInput.value, 10);
-      } else if (sliderInput && sliderInput.value) {
-        currentLine = parseInt(sliderInput.value, 10);
+      if (lineVal !== undefined && lineVal !== null) {
+        const strVal = String(lineVal).trim();
+        if (/^\d+$/.test(strVal)) {
+          const num = parseInt(strVal, 10);
+          if (num >= 1 && num <= 300) {
+            currentValidLine = num;
+          }
+        }
       }
 
-      if (isNaN(currentLine)) currentLine = 45;
-
-      if (lineInput && parseInt(lineInput.value, 10) !== currentLine) {
-        lineInput.value = currentLine;
+      if (lineInput && parseInt(lineInput.value, 10) !== currentValidLine) {
+        lineInput.value = currentValidLine;
       }
-      if (sliderInput && parseInt(sliderInput.value, 10) !== currentLine && currentLine <= 300) {
-        sliderInput.value = currentLine;
+      if (sliderInput && parseInt(sliderInput.value, 10) !== currentValidLine) {
+        sliderInput.value = currentValidLine;
       }
       if (displaySpan) {
-        displaySpan.textContent = `Line ${currentLine} (Span 40–120)`;
+        displaySpan.textContent = `Line ${currentValidLine} (Span 40–120)`;
       }
 
-      const result = checkPR(currentLine);
+      const result = checkPR(currentValidLine, prTitle, 'Rewrite in Rust');
 
       if (result.status === 'BLOCK') {
         alertBox.classList.remove('hidden');
         safeBox.classList.add('hidden');
         const alertP = alertBox.querySelector('p');
         if (alertP) alertP.textContent = `"${result.message}"`;
-        if (confSpan) confSpan.textContent = `${result.confidence}%`;
       } else {
         alertBox.classList.add('hidden');
         safeBox.classList.remove('hidden');
@@ -580,14 +664,43 @@ All alternative proposals to leak loop variables or dynamically bind them were f
     }
 
     function onLineInputChange(val) {
-      updatePRCheck(val);
+      const strVal = String(val).trim();
+      const num = Number(strVal);
+      if (/^\d+$/.test(strVal) && num >= 1 && num <= 300) {
+        currentValidLine = num;
+        updatePRCheck(num);
+      } else {
+        const lineInput = document.getElementById('line-input');
+        if (lineInput) {
+          lineInput.classList.add('border-red-500', 'ring-1', 'ring-red-500');
+          setTimeout(() => {
+            lineInput.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
+          }, 1500);
+        }
+        showToast('Please enter a whole number from 1 to 300.', 'warning');
+      }
+    }
+
+    function onLineInputBlur(inputEl) {
+      if (!inputEl) return;
+      const strVal = String(inputEl.value).trim();
+      const num = Number(strVal);
+      if (!(/^\d+$/.test(strVal)) || num < 1 || num > 300) {
+        inputEl.value = currentValidLine;
+      }
     }
 
     function onLineSliderChange(val) {
-      updatePRCheck(val);
+      const num = parseInt(val, 10);
+      if (!isNaN(num) && num >= 1 && num <= 300) {
+        currentValidLine = num;
+        const lineInput = document.getElementById('line-input');
+        if (lineInput) lineInput.value = num;
+        updatePRCheck(num);
+      }
     }
 
-    // Bug #3: Real Quote Verification verifyQuote(quote, source, minWords = 4)
+    // Real Quote Verification verifyQuote(quote, source, minWords = 4)
     function normalizeQuoteText(text) {
       if (!text) return '';
       return String(text)
@@ -601,7 +714,6 @@ All alternative proposals to leak loop variables or dynamically bind them were f
       const normQuote = normalizeQuoteText(quote);
       const normSource = normalizeQuoteText(source);
 
-      // Extract word tokens for overlap comparison
       const quoteWords = normQuote.replace(/[.,!?;:()]/g, ' ').split(' ').filter(Boolean);
       const sourceWords = normSource.replace(/[.,!?;:()]/g, ' ').split(' ').filter(Boolean);
       const sourceWordSet = new Set(sourceWords);
@@ -627,7 +739,31 @@ All alternative proposals to leak loop variables or dynamically bind them were f
     }
     window.verifyQuote = verifyQuote;
 
-    // Bug #4: Ported Ratcliff/Obershelp SequenceMatcher similarity ratio in JavaScript
+    // Helper: Update Quote Verification Badge UI - Requirement 2
+    function renderQuoteBadge(containerId, textId, badgeId, quoteText, quoteCheck) {
+      const quoteDisplay = document.getElementById(textId);
+      const quoteContainer = document.getElementById(containerId);
+      const quoteBadge = document.getElementById(badgeId);
+
+      if (quoteDisplay) quoteDisplay.textContent = `"${quoteText}"`;
+
+      if (quoteCheck.contiguous) {
+        if (quoteContainer) quoteContainer.className = 'p-3 bg-emerald-950/40 border border-emerald-800/80 rounded-lg';
+        if (quoteBadge) {
+          quoteBadge.className = 'flex items-center gap-3 mt-2 text-[10px] text-emerald-400';
+          quoteBadge.innerHTML = `<span>✓ Contiguous Match: <strong id="c-contiguous-match">TRUE</strong></span><span>Word Overlap: <strong id="c-word-overlap">${quoteCheck.overlapPercent}%</strong></span>`;
+        }
+      } else {
+        if (quoteContainer) quoteContainer.className = 'p-3 bg-amber-950/40 border border-amber-800/80 rounded-lg';
+        if (quoteBadge) {
+          quoteBadge.className = 'flex items-center gap-3 mt-2 text-[10px] text-amber-400';
+          quoteBadge.innerHTML = `<span>Quote NOT found — unverified</span><span>Word Overlap: <strong id="c-word-overlap">${quoteCheck.overlapPercent}%</strong></span>`;
+        }
+        showToast('⚠️ Quote NOT found — unverified against source discussion.', 'warning');
+      }
+    }
+
+    // SequenceMatcher similarity ratio in JavaScript
     function sequenceMatcherRatio(s1, s2) {
       if (s1 === s2) return 1.0;
       if (!s1 || !s2) return 0.0;
@@ -663,6 +799,7 @@ All alternative proposals to leak loop variables or dynamically bind them were f
       return (2.0 * total) / (s1.length + s2.length);
     }
 
+    // Requirement 3: bodyRatio computed dynamically with sequenceMatcherRatio()
     function calculateRelinkerScore() {
       const origSig = "parse_token_stream";
       const targetSig = "parse_token_stream";
@@ -670,9 +807,7 @@ All alternative proposals to leak loop variables or dynamically bind them were f
       const targetBody = "int parse_token_stream(TokenStream* ts) { while(fast_next_token(ts, &t)) { process(); } }";
 
       const sigMatch = origSig === targetSig ? 1.0 : sequenceMatcherRatio(origSig, targetSig);
-      // Normalized body ratio against benchmark anchor (77.0%)
-      const bodyRatio = 0.77;
-      // Formula: 50% * signature match + 50% * SequenceMatcher body ratio
+      const bodyRatio = sequenceMatcherRatio(origBody, targetBody);
       const confidence = (0.5 * sigMatch) + (0.5 * bodyRatio);
 
       return {
@@ -683,7 +818,9 @@ All alternative proposals to leak loop variables or dynamically bind them were f
       };
     }
 
-    // Engine Status Check: ALWAYS Green, Zero Offline Alerts, with 4s timeout
+    // Status Pill Check - Requirement 1:
+    // Grey Checking… first, green ONLY if tags lists gemma4:e4b, red otherwise.
+    // Removes "(Local Ollama)" unless check passes. No ALWAYS green logic.
     async function checkOllamaStatus(isManual = false) {
       const statusElement = document.getElementById('ollama-status');
       const dotElement = document.getElementById('ollama-dot');
@@ -691,64 +828,88 @@ All alternative proposals to leak loop variables or dynamically bind them were f
 
       if (!statusElement || !dotElement || !textElement) return;
 
-      statusElement.className = 'flex items-center gap-2 text-xs bg-slate-800/80 px-3 py-1.5 rounded-lg border border-emerald-700/60';
-      dotElement.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse';
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const res = await fetch('http://localhost:11434/api/tags', { signal: controller.signal });
+        clearTimeout(timeoutId);
 
-      const data = await fetchWithFallback('/api/status', { method: 'GET' }, null, 4000);
-      const source = data._source || 'cached-demo';
-      updateBadge('header-source-badge', source);
-
-      textElement.innerHTML = `Model: <strong class="text-white">gemma4:e4b</strong> (${source === 'live-gemma4' ? 'Local Ollama' : 'Active'})`;
-
-      if (isManual) {
-        showToast(`✅ AetherGit Engine Online (gemma4:e4b / ${source}).`, 'success');
+        if (res.ok) {
+          const data = await res.json();
+          const hasGemma = Array.isArray(data.models) && data.models.some(m => m.name && m.name.includes('gemma4:e4b'));
+          if (hasGemma) {
+            statusElement.className = 'flex items-center gap-2 text-xs bg-slate-800/80 px-3 py-1.5 rounded-lg border border-emerald-700/60';
+            dotElement.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse';
+            textElement.innerHTML = 'Model: <strong class="text-white">gemma4:e4b</strong> (Local Ollama)';
+            updateBadge('header-source-badge', 'live-gemma4');
+            if (isManual) showToast('✅ Connected to local Ollama (gemma4:e4b).', 'success');
+            return;
+          }
+        }
+      } catch (e) {
+        // Ollama offline / unreachable
       }
+
+      // Not connected
+      statusElement.className = 'flex items-center gap-2 text-xs bg-slate-800/80 px-3 py-1.5 rounded-lg border border-red-800/60';
+      dotElement.className = 'w-2.5 h-2.5 rounded-full bg-red-500';
+      textElement.innerHTML = 'Model: <strong class="text-white">gemma4:e4b</strong> (Offline)';
+      updateBadge('header-source-badge', 'cached-demo');
+      if (isManual) showToast('❌ Ollama is not running on this computer. Showing cached output.', 'error');
     }
 
-    // Wire unwired button to checkOllamaStatus(true)
+    // Wire Test Local AI button
     const apiTestBtn = document.getElementById('api-test-btn');
     if (apiTestBtn) {
       apiTestBtn.addEventListener('click', () => checkOllamaStatus(true));
     }
 
-    // Tab 1: Live MADR Extraction with 4s timeout & quote verification
+    // Tab 1: Extract Slide 6 Decision Record
     async function extractSlide6() {
       const resultsElement = document.getElementById('madr-record-display');
       if (resultsElement) {
         resultsElement.innerHTML = `<div class="flex items-center gap-2 text-blue-400 font-mono text-xs py-2"><span class="animate-spin text-sm">⚡</span> Extracting architectural decision record with gemma4:e4b...</div>`;
       }
 
-      const data = await fetchWithFallback(
-        '/api/extract',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ issue_number: 1832, reverted_pr: 1901 })
-        },
-        'slide_6_c_parser',
-        4000
-      );
+      const forumEl = document.getElementById('c-source-forum-text');
+      const sourceCorpus = forumEl ? forumEl.textContent : "PR #1901 was reverted because the Rust rewrite was 2x slower on big files compared to the C parser.";
 
-      const source = data._source || 'cached-demo';
+      let record = null;
+      let source = 'cached-demo';
+
+      try {
+        // Attempt live local Ollama call first
+        record = await callLocalOllama(sourceCorpus, 180000);
+        source = 'live-gemma4';
+      } catch (err) {
+        // Fall back to cached demo for default text
+        const data = await fetchWithFallback(
+          '/api/extract',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ issue_number: 1832, reverted_pr: 1901 })
+          },
+          'slide_6_c_parser',
+          4000
+        );
+        record = data.decision_record || data;
+        source = 'cached-demo';
+      }
+
       updateBadge('madr-source-badge', source);
-
-      const record = data.decision_record || data;
       renderMADR(record);
 
-      // Run real verifyQuote on the C parser demo
       const quoteText = record.verbatim_evidence || "2x slower on big files compared to the C parser";
-      const forumEl = document.getElementById('c-source-forum-text');
-      const sourceCorpus = forumEl ? forumEl.textContent : "PR #1901 was reverted because the Rust rewrite caused a 2x slower latency regression on big files compared to the C parser.";
       const quoteCheck = verifyQuote(quoteText, sourceCorpus, 4);
 
-      const quoteDisplay = document.getElementById('c-quote-text');
-      const matchDisplay = document.getElementById('c-contiguous-match');
-      const overlapDisplay = document.getElementById('c-word-overlap');
-      if (quoteDisplay) quoteDisplay.textContent = `"${quoteText}"`;
-      if (matchDisplay) matchDisplay.textContent = quoteCheck.contiguous ? 'TRUE' : 'FALSE';
-      if (overlapDisplay) overlapDisplay.textContent = `${quoteCheck.overlapPercent}%`;
+      renderQuoteBadge('c-quote-container', 'c-quote-text', 'c-quote-badge', quoteText, quoteCheck);
 
-      showToast(`✅ Extracted MADR record (${source}).`, 'success');
+      if (source === 'live-gemma4') {
+        showToast('✅ Extracted live with local gemma4:e4b.', 'success');
+      } else {
+        showToast('ℹ️ Displaying cached demo output (local Ollama offline).', 'info');
+      }
     }
 
     function renderMADR(data) {
@@ -776,36 +937,73 @@ All alternative proposals to leak loop variables or dynamically bind them were f
       `;
     }
 
-    // Tab 2: PEP Scoping Recovery with 4s timeout & real quote verification
+    // Tab 2: PEP Scoping Recovery
     async function extractPEP() {
       const resultsElement = document.getElementById('pep-results-display');
       const inputEl = document.getElementById('pep-input');
       const inputText = inputEl ? inputEl.value : '';
+      const isUserChanged = inputText.trim() !== DEFAULT_PEP_TEXT.trim();
 
       if (resultsElement) {
-        resultsElement.innerHTML = `<div class="flex items-center gap-2 text-blue-400 font-mono text-xs py-2"><span class="animate-spin text-sm">⚡</span> Running architectural recovery on discussion thread with gemma4:e4b...</div>`;
+        resultsElement.innerHTML = `<div class="flex items-center gap-2 text-blue-400 font-mono text-xs py-2"><span class="animate-spin text-sm">⚡</span> Running architectural recovery with gemma4:e4b...</div>`;
       }
 
-      const data = await fetchWithFallback(
-        '/api/evaluate-pep',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ discussion_text: inputText })
-        },
-        'pep_discussion_recovery',
-        4000
-      );
+      let record = null;
+      let source = 'cached-demo';
 
-      const source = data._source || 'cached-demo';
+      try {
+        // Direct browser call to local Ollama (180s timeout)
+        record = await callLocalOllama(inputText, 180000);
+        source = 'live-gemma4';
+      } catch (err) {
+        if (isUserChanged) {
+          // Requirement 1: If Ollama unreachable and user changed text, show red message: "Gemma is not running on this computer. Showing nothing."
+          if (resultsElement) {
+            resultsElement.innerHTML = `
+              <div class="p-4 bg-red-950/80 border border-red-700 rounded-lg text-red-200 text-xs space-y-2">
+                <div class="font-bold flex items-center gap-2 text-red-300">
+                  <span class="text-sm">❌</span> Gemma is not running on this computer. Showing nothing.
+                </div>
+                <p class="text-slate-300 text-[11px]">
+                  You entered custom discussion text, but local Ollama (<code>gemma4:e4b</code>) is unreachable at <code>http://localhost:11434</code>.
+                </p>
+                <p class="text-slate-400 text-[10px]">
+                  To run live: start Ollama with <code>OLLAMA_ORIGINS="https://aethergit.vercel.app" ollama serve</code>, then click Recover Decisions again.
+                </p>
+              </div>
+            `;
+          }
+          updateBadge('pep-source-badge', 'cached-demo');
+          showToast('❌ Gemma is not running on this computer. Showing nothing.', 'error');
+          return;
+        }
+
+        // Unchanged text: fall back to cached demo
+        const data = await fetchWithFallback(
+          '/api/evaluate-pep',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ discussion_text: inputText })
+          },
+          'pep_discussion_recovery',
+          4000
+        );
+        record = data.decision_record || data;
+        source = 'cached-demo';
+      }
+
       updateBadge('pep-source-badge', source);
-
-      const record = data.decision_record || data;
       const quoteText = record.verbatim_evidence || record.verbatim_quote || "leaking comprehension variables creates subtle bugs and shadows outer variables";
       const quoteCheck = verifyQuote(quoteText, inputText, 4);
 
       renderPEPResults(record, quoteCheck);
-      showToast(`✅ Recovered architectural consensus (${source}).`, 'success');
+
+      if (source === 'live-gemma4') {
+        showToast('✅ Recovered architectural consensus with local gemma4:e4b.', 'success');
+      } else {
+        showToast('ℹ️ Displaying cached demo output (local Ollama offline).', 'info');
+      }
     }
 
     function renderPEPResults(data, quoteCheck) {
@@ -817,17 +1015,31 @@ All alternative proposals to leak loop variables or dynamically bind them were f
       const why = data.why || 'Variable leaking created subtle bugs and shadowed outer variables unexpectedly.';
       const quote = data.verbatim_evidence || data.verbatim_quote || 'leaking comprehension variables creates subtle bugs and shadows outer variables';
 
-      const isContiguous = quoteCheck ? quoteCheck.contiguous : true;
-      const overlapPct = quoteCheck ? quoteCheck.overlapPercent : 100;
+      const isContiguous = quoteCheck ? quoteCheck.contiguous : false;
+      const overlapPct = quoteCheck ? quoteCheck.overlapPercent : 0;
+
+      let traceBadgeHtml = '';
+      if (isContiguous) {
+        traceBadgeHtml = `
+          <div id="pep-trace-badge" class="mt-3 p-2 bg-emerald-950/40 border border-emerald-800 rounded text-[11px] text-emerald-300">
+            ✓ Contiguous Quote Match Verified (TRUE) · Word Overlap: ${overlapPct}%
+          </div>
+        `;
+      } else {
+        traceBadgeHtml = `
+          <div id="pep-trace-badge" class="mt-3 p-2 bg-amber-950/40 border border-amber-800 rounded text-[11px] text-amber-300">
+            Quote NOT found — unverified · Word Overlap: ${overlapPct}%
+          </div>
+        `;
+        showToast('⚠️ Quote NOT found — unverified against source discussion.', 'warning');
+      }
 
       resultsElement.innerHTML = `
         <p><strong>DECIDED:</strong> <span class="text-emerald-400 font-semibold">${escapeHtml(decided)}</span></p>
         <p><strong>REJECTED ALTERNATIVE:</strong> <span class="text-red-400 font-semibold">${escapeHtml(rejected)}</span></p>
         <p><strong>WHY:</strong> ${escapeHtml(why)}</p>
         <p><strong>VERBATIM EVIDENCE:</strong> <em class="text-slate-400">"${escapeHtml(quote)}"</em></p>
-        <div id="pep-trace-badge" class="mt-3 p-2 bg-emerald-950/40 border border-emerald-800 rounded text-[11px] text-emerald-300">
-          ✓ Contiguous Quote Match Verified (${isContiguous ? 'TRUE' : 'FALSE'}) · Word Overlap: ${overlapPct}%
-        </div>
+        ${traceBadgeHtml}
       `;
     }
 
@@ -840,7 +1052,6 @@ All alternative proposals to leak loop variables or dynamically bind them were f
       const ratioSpan = document.getElementById('relink-ratio-score');
       if (btn) btn.innerHTML = '<span>⚡</span> Calculating AST + Difflib Match...';
 
-      // Ported JavaScript calculation runs in browser
       const result = calculateRelinkerScore();
 
       setTimeout(() => {
@@ -868,12 +1079,12 @@ All alternative proposals to leak loop variables or dynamically bind them were f
           card.classList.add('ring-2', 'ring-blue-400');
           setTimeout(() => card.classList.remove('ring-2', 'ring-blue-400'), 2000);
         }
-        showToast('✅ Re-scanned and unified 2 contributor profiles across GitHub, Git commits, and Discourse.', 'success');
+        showToast('✅ Re-scanned and unified contributor profiles across GitHub, Git commits, and Discourse.', 'success');
         if (btn) btn.innerHTML = '<span>👥</span> Re-scan Contributor Graph';
       }, 300);
     }
 
-    // On page load: ensure sensible default PR intent, update PR check, and check engine
+    // Page initialization
     document.addEventListener('DOMContentLoaded', () => {
       const intentInput = document.getElementById('pr-intent');
       if (intentInput && !intentInput.value) {
@@ -883,9 +1094,8 @@ All alternative proposals to leak loop variables or dynamically bind them were f
       checkOllamaStatus(false);
     });
 
-    // Fallback immediate execution
+    // Immediate fallback initialization
     updatePRCheck(45);
   </script>
-<!-- Bug #4: Properly closed tags -->
 </body>
 </html>
