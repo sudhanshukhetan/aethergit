@@ -8,6 +8,9 @@ from src.engine import (
     relink_symbol_across_repo,
     resolve_contributor_identities,
     verify_source_traceability,
+    detect_local_gemma_model,
+    extract_decision_record_with_gemma,
+    evaluate_pr_regression_with_gemma,
 )
 
 
@@ -187,6 +190,51 @@ class TestRenameRelinkerAndIdentity(unittest.TestCase):
         self.assertFalse(res["contiguous_match"])
 
 
+class TestGemmaOllamaInference(unittest.TestCase):
+    def test_detect_local_gemma_model(self):
+        """Tests that detect_local_gemma_model handles CI or offline Ollama server gracefully."""
+        res = detect_local_gemma_model("gemma4:e4b")
+        self.assertIn("available", res)
+        self.assertIn("model", res)
+        self.assertTrue("gemma" in res["model"].lower())
+
+    def test_extract_decision_record_deterministic_gate(self):
+        """Tests that extract_decision_record returns MADR JSON fields in CI or fallback."""
+        bundle = {
+            "scenario_id": "slide_6_c_parser",
+            "raw_text": "Issue #1832: Rust rewrite was 2x slower on big files compared to the C parser. Revert #1901.",
+            "force_mock": True,
+        }
+        res = extract_decision_record_with_gemma(bundle, model_name="gemma4:e4b")
+        self.assertIn("decided", res)
+        self.assertIn("rejected", res)
+        self.assertIn("why", res)
+        self.assertIn("sources", res)
+        self.assertIn("bot_warning", res)
+        self.assertEqual(res["decided"], "Keep the C parser")
+        self.assertEqual(res["rejected"], "Rewrite in Rust")
+
+    def test_evaluate_pr_regression_guard(self):
+        """Tests that PR repeating rejected alternative triggers warning bot alert."""
+        decision_record = {
+            "decided": "Keep the C parser",
+            "rejected": "Rewrite in Rust",
+            "why": "2x slower on big files compared to the C parser",
+            "bot_warning": "Tried in 2022 and reverted: 2x slower. See #1901.",
+        }
+        # A PR proposing rewrite in rust
+        pr_text = "PR #2450: Complete rewrite of token parser in Rust for memory safety."
+        eval_res = evaluate_pr_regression_with_gemma(pr_text, decision_record)
+        self.assertTrue(eval_res["is_regression"])
+        self.assertGreaterEqual(eval_res["confidence"], 0.80)
+        self.assertEqual(eval_res["alert_message"], "Tried in 2022 and reverted: 2x slower. See #1901.")
+
+        # An innocent PR fixing a typo
+        innocent_pr = "PR #2451: Fix documentation typo in README comments."
+        innocent_eval = evaluate_pr_regression_with_gemma(innocent_pr, decision_record)
+        self.assertFalse(innocent_eval["is_regression"])
+
+
 # Pytest top-level test discovery compatibility
 def test_pytest_diff_anchor_multiline():
     suite = TestSignalFilterAndDiffAnchor()
@@ -212,6 +260,13 @@ def test_pytest_verify_traceability():
     suite = TestRenameRelinkerAndIdentity()
     suite.test_verify_source_traceability_success()
     suite.test_verify_source_traceability_rejects_hallucination()
+
+
+def test_pytest_gemma_model_and_inference():
+    suite = TestGemmaOllamaInference()
+    suite.test_detect_local_gemma_model()
+    suite.test_extract_decision_record_deterministic_gate()
+    suite.test_evaluate_pr_regression_guard()
 
 
 if __name__ == "__main__":
