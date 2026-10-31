@@ -2,12 +2,12 @@
 
 > **Hacktoberfest 2026 · Hack Day Sonipat (NST Rishihood University)**  
 > **Problem 06: Recover the Decisions Nobody Wrote Down**  
-> *Powered strictly by local open-weight Google Gemma (`gemma4:e4b` via Ollama)*
+> *Powered by Google Gemma 4 (`gemma-4-26b-a4b-it` via Google Gemini API & local Ollama)*
 
 [![CI Pipeline](https://img.shields.io/badge/CI-Passing%20(Python%203.11)-success?logo=github-actions)](.github/workflows/ci.yml)
-[![AI Model](https://img.shields.io/badge/AI%20Model-gemma4%3Ae4b%20(Local%20Ollama)-blueviolet?logo=ollama)](#-open-weight-ai-model-execution)
+[![AI Model](https://img.shields.io/badge/AI%20Model-Gemma%204%20(Open%20Weights)-blueviolet?logo=google)](https://ai.google.dev/gemma/terms)
+[![Deployment](https://img.shields.io/badge/Deployed-Vercel-black?logo=vercel)](https://aethergit.vercel.app/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Strictly Open Source](https://img.shields.io/badge/Cloud%20APIs-Zero%20(100%25%20Offline)-brightgreen)](#-zero-cloud-api-policy)
 
 ---
 
@@ -51,7 +51,7 @@ flowchart TD
     end
 
     subgraph S2["Stage 2: Verifiable MADR Extraction"]
-        E --> F["Local Gemma 4 Engine (gemma4:e4b via Ollama)"]
+        E --> F["Gemma 4 Engine (Gemini API or Local Ollama)"]
         F --> G["MADR JSON Decision Record"]
         G --> H["Contiguous Substring Quote Validator (>=4 words)"]
         H -->|"Verified Evidence"| I["Deterministic Code Anchor"]
@@ -61,63 +61,68 @@ flowchart TD
         I --> J["Hybrid AST Relinker (50% Sig + 50% SequenceMatcher)"]
         J --> K["Unified Contributor Identity Graph"]
         K --> L["Decisions Bot Firewall"]
-        L -->|"New PR touches lines 40-120"| M["🚨 Block Mistake: Tried in 2022 and reverted: 2x slower. See #1901."]
+        L -->|"New PR touches lines 40-120 with matching title"| M["🚨 Block Mistake: Tried in 2022 and reverted: 2x slower. See #1901."]
     end
 ```
 
 ---
 
-## 3. How We Solve All 5 Official Judging Rubric Challenges (Page 12)
+## 3. Division of Labor: AI vs. Deterministic Code
 
-| # | Official Judge Question (Page 12) | Technical Solution in `src/engine.py` | Implementation Details |
+AetherGit enforces a strict boundary between probabilistic LLM extraction and deterministic code verification so that hallucinations cannot compromise architectural history:
+
+1. **AI Model Role (`gemma-4-26b-a4b-it`):**
+   - Ingests raw, unstructured, messy developer discussions (GitHub issues, review comments, mailing lists).
+   - Extracts a structured MADR schema: `decided`, `rejected`, `why`, and `verbatim_evidence`.
+   - Never makes unilateral policy decisions; acts strictly as an information extraction engine.
+
+2. **Deterministic Code Role (Python & JavaScript):**
+   - **Quote Verification:** Performs an exact, normalized contiguous substring check ($\ge 4$ consecutive words) against the raw input corpus. If the quote is missing or modified, the UI flags it with an amber badge (`Quote NOT found in the discussion — unverified`).
+   - **AST Diff Anchoring:** Combines 50% function signature matching (`relink_symbol_across_repo`) with 50% normalized `difflib.SequenceMatcher` body similarity to survive file renames and line edits with $\ge 85\%$ confidence.
+   - **PR Firewall:** Evaluates numeric line overlap (40..120) and tests case-insensitive whole-word overlap ($> 3$ characters, e.g. regex `\b[a-zA-Z]{4,}\b`) between the PR title and the rejected decision text. "Trust the parser" will never trigger a false positive on "Rust".
+
+This guarantee means that **if the verbatim quote does not verify against the source corpus, the extracted decision is flagged and unverified**, preventing hallucinated claims from entering the architectural record.
+
+---
+
+## 4. Open-Weight AI Model: Gemma 4
+
+AetherGit uses Google's open-weight **Gemma 4** model family:
+- **Default Production Model:** `gemma-4-26b-a4b-it`
+- **Hosted Execution:** Deployed serverlessly via the Google Gemini API (`https://generativelanguage.googleapis.com/v1beta/models/gemma-4-26b-a4b-it:generateContent`).
+- **Open-Weight License:** Gemma is provided under the open-weight terms of use. See the official [Gemma Terms of Use](https://ai.google.dev/gemma/terms).
+- **Local Alternative:** Can run 100% offline using Ollama (`gemma4:e4b` or any local Gemma checkpoint).
+
+---
+
+## 5. Deployment Configuration (Vercel)
+
+The live web application runs on Vercel at [https://aethergit.vercel.app/](https://aethergit.vercel.app/).
+
+To configure the live Gemma 4 backend on Vercel:
+1. Open your Vercel Dashboard and navigate to **Project Settings** -> **Environment Variables**.
+2. Add the following environment variable:
+   - `GEMINI_API_KEY`: Your Google AI Studio API key (obtainable from [Google AI Studio](https://aistudio.google.com/)).
+3. *(Optional)* Add `GEMMA_MODEL` if you wish to override the default model name (defaults to `gemma-4-26b-a4b-it`).
+4. Serverless functions are configured in `vercel.json` with a 60-second execution budget (`maxDuration: 60`) to accommodate model response generation.
+
+> **Security Note:** The `GEMINI_API_KEY` is exclusively consumed server-side in `app.py` via HTTP header `x-goog-api-key`. It is never returned to the browser, logged, or exposed in client bundles.
+
+---
+
+## 6. How We Solve All 5 Official Judging Rubric Challenges
+
+| # | Official Judge Question | Technical Solution in `src/engine.py` & `app.py` | Implementation Details |
 |---|---|---|---|
-| **1** | **Extracting from very long discussions?** | `score_and_rank_discussion(messages, top_k=8)` | Prioritizes rejection/benchmark terms (`rejected`, `revert`, `slower`, `benchmark`, `veto`), boosts maintainer authority, adds position weights to the final 3 closing consensus replies, and never drops context. |
-| **2** | **Distinguishing accepted vs. rejected ideas?** | Contrastive MADR Schema + Git Revert State in `extract_decision_record_with_gemma` | Combines Git merge/revert metadata with Gemma's structured JSON schema to separate `decided` from `rejected`, extracting individual technical failure causes (benchmarked on Python PEP discussions without the PEP document). |
-| **3** | **What if files are renamed AND edited?** | `relink_symbol_across_repo(sig, old_body, candidates)` | Combines **50% function signature matching** (`parse_token_stream`) + **50% normalized `difflib.SequenceMatcher` body similarity** so that even if `parser/core.c` moves to `src/lexer/fast_core.c` and lines are edited, the architectural link survives with >=85% confidence. |
-| **4** | **Recognizing contributors across platforms?** | `resolve_contributor_identities(participants)` | Cross-Platform Identity Graph unifying GitHub handles (`@gvanrossum`), Git commit emails (`guido@python.org`), and `discuss.python.org` forum display names (`Guido van Rossum`) into a canonical profile. |
-| **5** | **Verifying every decision against its source?** | `verify_source_traceability(record, raw_corpus)` | Contiguous Substring Quote Validator requiring **>=60% content-word overlap** AND an exact **contiguous multi-word match (>=4 consecutive words)** from `verbatim_evidence` inside the source corpus, rejecting hallucinated AI summaries. |
+| **1** | **Extracting from very long discussions?** | `score_and_rank_discussion(messages, top_k=8)` | Prioritizes rejection/benchmark terms (`rejected`, `revert`, `slower`, `benchmark`, `veto`), boosts maintainer authority, adds position weights to closing consensus replies, and prevents context overflow. |
+| **2** | **Distinguishing accepted vs. rejected ideas?** | Contrastive MADR Schema + Git Revert State in `call_gemma_api` | Combines Git revert metadata with Gemma's structured JSON schema to contrast `decided` against `rejected`, isolating specific technical failure causes. |
+| **3** | **What if files are renamed AND edited?** | `relink_symbol_across_repo(sig, old_body, candidates)` | Combines **50% function signature matching** + **50% normalized `difflib.SequenceMatcher` body similarity** so that even if `parser/core.c` moves to `src/lexer/fast_core.c` and lines are edited, the link survives with $\ge 85\%$ confidence. |
+| **4** | **Recognizing contributors across platforms?** | `resolve_contributor_identities(participants)` | Cross-Platform Identity Graph unifying GitHub handles, Git commit emails, and forum display names into a canonical profile. |
+| **5** | **Verifying every decision against its source?** | Contiguous Substring Quote Validator | Contiguous substring verifier requiring $\ge 4$ consecutive words matched in the raw source corpus, flagging hallucinated summaries. |
 
 ---
 
-## 4. Open-Weight AI Model Execution
-
-- **AI Model:** `gemma4:e4b`
-- **Execution Environment:** Local Ollama (`http://localhost:11434/api/generate` and `/api/tags`)
-- **Zero Cloud API Policy:** Zero OpenAI, Anthropic, or Gemini Cloud API keys. Complies 100% with Problem 08 and Section 3 open-weight hackathon rules.
-- **Deterministic CI Gate:** When running in GitHub Actions (`CI=true`) or when local Ollama is offline, `src/engine.py` activates an instantaneous verified deterministic gate so test suites pass 100% green in under 1 second.
-
----
-
-## 5. Repository Structure
-
-```text
-aethergit/
-├── .github/
-│   ├── pull_request_template.md    # Mandatory 4-header PR template (Section 5)
-│   └── workflows/
-│       └── ci.yml                  # Automated Python 3.11 build, test, and CLI workflow
-├── examples/                       # Mandatory Section 4.5 artifacts
-│   ├── sample_input.json           # Slide 6 C Parser & Page 12 Python PEP Scenarios
-│   └── actual_output.json          # Real verified output generated by AetherGit
-├── src/
-│   ├── __init__.py
-│   ├── engine.py                   # Core Decision Intelligence & Ollama Gemma engine
-│   └── cli.py                      # Command-line interface and git blame comparison tool
-├── tests/
-│   ├── __init__.py
-│   ├── test_smoke.py               # CI environment bootstrap smoke test
-│   └── test_engine.py              # 16 unit tests covering all 5 rubric challenges
-├── app.py                          # Interactive 3-tab Streamlit dashboard
-├── index.html                      # Standalone dark-mode Tailwind CSS web application
-├── HACKATHON.md                    # Official Team & Problem registration
-├── LICENSE                         # MIT License (Team Aadi Yogi)
-├── requirements.txt                # Production dependencies (streamlit, requests, pytest)
-└── README.md                       # Comprehensive architecture guide
-```
-
----
-
-## 6. Quickstart & Installation
+## 7. Quickstart & Local Execution
 
 ### 1. Clone & Set Up Environment
 ```bash
@@ -128,40 +133,80 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Optional: Run Local Gemma via Ollama
+### 2. Configure Environment Variables
+Copy `.env.example` to `.env`:
 ```bash
-# Pull the open-weight Gemma model
-ollama pull gemma4:e4b
+cp .env.example .env
 ```
 
-### 3. Run Automated Unit Tests (16 Tests)
+### 3. Running Locally
+
+#### Mode A: With Google Gemini API (Gemma 4)
 ```bash
-PYTHONPATH=. pytest tests/ -v
-# Or with standard library unittest:
-python3 -m unittest discover tests
+export GEMINI_API_KEY="your-google-ai-studio-api-key"
+export GEMMA_MODEL="gemma-4-26b-a4b-it"   # optional, default
+python3 app.py
+```
+Open `http://localhost:5000` in your browser.
+
+#### Mode B: 100% Offline with Ollama
+```bash
+# Pull and start local Gemma in another terminal
+ollama run gemma4:e4b
+
+# Set environment variables for local execution
+export AI_PROVIDER="ollama"
+export OLLAMA_URL="http://localhost:11434"
+python3 app.py
 ```
 
-### 4. Run AetherGit CLI Scanner & Example Validator
+### 4. Running Automated Unit Tests
 ```bash
-# Validate Section 4.5 mandatory examples
-python3 -m src.cli --verify-examples
-
-# Scan repository commit history for reverts
-python3 -m src.cli --scan-git-log
-```
-
-### 5. Launch Interactive Web Dashboards
-```bash
-# Option A: Streamlit UI
-streamlit run app.py
-
-# Option B: Standalone Web App
-open index.html
+# Deterministic CI gate executes in under 1 second:
+CI=true PYTHONPATH=. python3 -m unittest discover tests -v
 ```
 
 ---
 
-## 7. Team Details
+## 8. Repository Structure
+
+```text
+aethergit/
+├── .github/
+│   ├── pull_request_template.md    # Mandatory 4-header PR template
+│   └── workflows/
+│       └── ci.yml                  # Automated build, test, and CLI workflow
+├── examples/                       # Section 4.5 artifacts
+│   ├── sample_input.json           # Sample C parser & discussion scenario
+│   └── actual_output.json          # Real verified output generated by AetherGit
+├── src/
+│   ├── __init__.py
+│   ├── engine.py                   # Core Decision Intelligence algorithms
+│   └── cli.py                      # Command-line interface and git blame tool
+├── tests/
+│   ├── __init__.py
+│   ├── test_smoke.py               # Bootstrap smoke test
+│   ├── test_engine.py              # Unit tests for engine algorithms
+│   └── test_api_endpoints.py       # API server and live Gemma endpoint tests
+├── app.py                          # Flask API backend & web server
+├── index.html                      # Interactive dark-mode web application
+├── vercel.json                     # Vercel serverless function configuration
+├── requirements.txt                # Python dependencies
+├── .env.example                    # Environment template
+└── README.md                       # Architecture & setup guide
+```
+
+---
+
+## 9. AI Disclosure & Tools Used
+
+In accordance with Hacktoberfest 2026 and Hack Day Sonipat AI disclosure policies:
+- **Model in Production Application:** Google Gemma 4 (`gemma-4-26b-a4b-it`) hosted via Google Gemini API, alongside local Ollama `gemma4:e4b` support.
+- **Development Assistance:** AI coding assistants (Google Antigravity, Gemini 2.5 Flash / Pro, and Claude) were utilized for test scaffolding, documentation drafting, and refactoring Flask API routes. All code and logic was verified with deterministic automated test suites.
+
+---
+
+## 10. Team Details
 
 - **Team Name:** Aadi Yogi
 - **Members:**
@@ -171,4 +216,3 @@ open index.html
   - Mauli Arora
 - **Event:** Hacktoberfest 2026 – Hack Day Sonipat (NST Rishihood University)
 - **Problem Statement:** Problem 06: Open Source Decision Intelligence and Knowledge Recovery
-- **AI Models Used:** `gemma4:e4b (via Ollama local execution)`
