@@ -307,9 +307,15 @@ def resolve_contributor_identities(
         email = item.get("email") or ""
         forum_name = item.get("forum_name") or name
 
-        # Naive approach: group simply by first 3 letters of handle or name
-        prefix_key = normalize_token(github or name)[:3]
-        keys.add(prefix_key)
+        # Collect keys to cluster
+        keys = set()
+        if github:
+            keys.add(normalize_token(github))
+        if email:
+            keys.add(normalize_token(email.split("@")[0]))
+            keys.add(email.lower())
+        if name:
+            keys.add(normalize_token(name))
 
         # Check if matches existing profile
         matched_profile = None
