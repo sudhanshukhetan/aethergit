@@ -4,9 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AetherGit · Open Source Decision Intelligence</title>
-  <meta name="description" content="AetherGit: Open Source Decision Intelligence and Architectural Knowledge Recovery. Recover lost consensus, link AST anchors, and guard PRs against historical regressions with local gemma4:e4b.">
+  <meta name="description" content="AetherGit: Open Source Decision Intelligence and Architectural Knowledge Recovery. Recover lost consensus, link AST anchors, and guard PRs against historical regressions with live Gemma 4.">
   <meta property="og:title" content="AetherGit · Open Source Decision Intelligence">
-  <meta property="og:description" content="Recover lost architectural consensus from past PRs and discussions. AST symbol anchors and real-time PR regression firewall powered by local gemma4:e4b.">
+  <meta property="og:description" content="Recover lost architectural consensus from past PRs and discussions. AST symbol anchors and real-time PR regression firewall powered by live Gemma 4 via Gemini API.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://aethergit.vercel.app/">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -32,7 +34,7 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased">
 
-  <!-- Toast Notification Banner Container (Non-blocking replacement for alert) -->
+  <!-- Toast Notification Banner Container -->
   <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-md w-full pointer-events-none"></div>
 
   <!-- Top Header Navigation -->
@@ -44,19 +46,19 @@
         <span class="bg-blue-900/80 text-blue-300 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-blue-700">Problem 06</span>
         <span class="bg-emerald-900/80 text-emerald-300 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-emerald-700">Hacktoberfest 2026</span>
       </div>
-      <p class="text-xs text-slate-400 mt-1">Open Source Decision Intelligence &amp; Knowledge Recovery · Powered by local <code class="text-emerald-400 font-mono">gemma4:e4b</code></p>
+      <p class="text-xs text-slate-400 mt-1">Open Source Decision Intelligence &amp; Knowledge Recovery · Powered by Gemma 4</p>
+      <p class="text-[11px] text-slate-400 mt-0.5">Live mode sends the text you paste to Google's Gemini API to run Gemma 4. Don't paste private information.</p>
     </div>
     <div class="flex items-center gap-3">
-      <!-- Bug #2: Unwired Header Button Wired to checkOllamaStatus(true) -->
-      <button id="api-test-btn" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1.5 cursor-pointer">
-        <span>⚡</span> Test Local AI
+      <button id="api-test-btn" onclick="checkStatus(true)" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1.5 cursor-pointer">
+        <span>⚡</span> Check Status
       </button>
 
-      <!-- Ollama Live Status Pill -->
+      <!-- Live Status Pill -->
       <div id="ollama-status" class="flex items-center gap-2 text-xs bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
-        <span id="ollama-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span id="ollama-text" class="text-slate-300">Model: <strong class="text-white">gemma4:e4b</strong> (Active)</span>
-        <span id="header-source-badge" class="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-900 text-slate-300 border border-slate-700">cached-demo</span>
+        <span id="ollama-dot" class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+        <span id="ollama-text" class="text-slate-300">Checking…</span>
+        <span id="header-source-badge" class="hidden px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold"></span>
       </div>
     </div>
   </header>
@@ -70,56 +72,42 @@
         <span>🚀</span> Slide 6 Flow (C Parser vs Rust Revert &amp; PR Bot)
       </button>
       <button onclick="switchTab('pep_evaluator')" id="tab-btn-pep" class="pb-3 px-2 border-b-2 border-transparent font-medium text-slate-400 hover:text-slate-200 text-sm flex items-center gap-2 cursor-pointer">
-        <span>📜</span> Python PEP Scoping Evaluator (Page 12)
+        <span>📜</span> Paste Any Discussion (General Recovery)
       </button>
       <button onclick="switchTab('identity_resolver')" id="tab-btn-identity" class="pb-3 px-2 border-b-2 border-transparent font-medium text-slate-400 hover:text-slate-200 text-sm flex items-center gap-2 cursor-pointer">
-        <span>🔗</span> Rename Relinker &amp; Identity Graph
+        <span>🔗</span> Roadmap (Planned Features)
       </button>
     </div>
 
-    <!-- TAB 1: SLIDE 6 FLOW (Active by default) -->
-    <!-- Bug #10: Responsive grid classes grid-cols-1 lg:grid-cols-3 -->
+    <!-- TAB 1: SLIDE 6 FLOW -->
     <div id="slide6" class="space-y-6">
       <div class="bg-slate-900/40 border border-slate-800 p-4 rounded-xl">
-        <h2 class="text-lg font-semibold text-white">The Real-World Architectural Memory Problem (Slide 6 &amp; Blueprint)</h2>
-        <p class="text-xs text-slate-400 mt-1">Demonstrates how AetherGit mines 140+ reply issue discussions, extracts verifiable MADR records, anchors them to exact function symbols, and blocks architectural regression in future Pull Requests.</p>
+        <h2 class="text-lg font-semibold text-white">Architectural Memory Recovery (Slide 6 Demo)</h2>
+        <p class="text-xs text-slate-400 mt-1">Recovers decisions from team discussions, extracts verifiable quotes, and prevents historical regression in new Pull Requests.</p>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        <!-- Col 1: Raw Unstructured Corpus -->
+        <!-- Col 1: Discussion Input -->
         <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
-          <div>
-            <div class="flex items-center justify-between mb-3">
-              <h3 class="font-bold text-sm text-slate-200">1. Signal-Weighted Thread Mining</h3>
-              <span class="text-xs text-slate-400 font-mono">142 replies</span>
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="font-bold text-sm text-slate-200">1. Team Discussion</h3>
+              <span class="text-[11px] text-blue-400 font-mono">Sample Discussion</span>
             </div>
             
-            <div class="space-y-3 text-xs">
-              <div class="bg-slate-950 p-3 rounded-lg border border-slate-800/80">
-                <span class="text-slate-500 font-mono">Issue #1832 (Key Excerpt):</span>
-                <p class="mt-1 text-slate-300"><strong>@bench_bot:</strong> Benchmark completed: Rust rewrite was <strong>2x slower on big files</strong> compared to the C parser due to FFI boundary marshaling.</p>
-                <p class="mt-1 text-slate-300"><strong>@maintainer_lead:</strong> Consensus reached: Keep the C parser. Reverting #1901.</p>
-              </div>
-
-              <div class="bg-slate-950 p-3 rounded-lg border border-slate-800/80">
-                <span class="text-slate-500 font-mono">Reverted PR #1901 Diff Header:</span>
-                <pre class="mt-1 text-emerald-400 font-mono text-[11px] overflow-x-auto">diff --git a/parser/core.c b/parser/core.c
-@@ -40,81 +40,81 @@ int parse_token_stream(TokenStream* ts)
--    // C parser implementation
-+    // Attempted Rust rewrite (reverted)</pre>
-              </div>
-
-              <div class="bg-slate-950 p-3 rounded-lg border border-slate-800/80">
-                <span class="text-slate-500 font-mono">2022 Forum Thread:</span>
-                <p id="c-source-forum-text" class="mt-1 text-slate-300">"PR #1901 was reverted because the Rust rewrite was 2x slower on big files compared to the C parser."</p>
-              </div>
+            <div>
+              <label for="slide6-input" class="block text-xs font-bold text-slate-300 mb-1.5">Sample written by our team for the demo:</label>
+              <textarea id="slide6-input" rows="8" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-slate-300 font-mono text-xs focus:ring-1 focus:ring-blue-500 outline-none leading-relaxed">Issue #1832: Proposal: rewrite the C parser in parser/core.c in Rust.
+Asha: Our C parser is old. I suggest we rewrite it in Rust.
+Ravi: I opened PR #1901 with the Rust version and ran benchmarks.
+Ravi: Result: the Rust version was 2x slower on big files.
+Asha: That is too slow. Reverting PR #1901. We keep the C parser.</textarea>
             </div>
           </div>
 
-          <!-- Bug #3: extract-decision-record-btn with valid JS strings -->
           <button id="extract-decision-record-btn" onclick="extractSlide6()" class="mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 px-4 rounded-lg text-xs transition flex items-center justify-center gap-2 cursor-pointer">
-            <span>⚡</span> Extract with gemma4:e4b
+            <span>⚡</span> Extract with Gemma 4
           </button>
         </div>
 
@@ -127,36 +115,20 @@
         <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-4">
           <div class="flex items-center justify-between">
             <h3 class="font-bold text-sm text-slate-200">2. Recovered Architectural Memory</h3>
-            <div class="flex items-center gap-2">
-              <span id="madr-source-badge" class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-800 text-slate-300 border border-slate-700">cached-demo</span>
-              <span class="bg-emerald-950 text-emerald-400 border border-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded">MADR FORMAT</span>
-            </div>
+            <span id="madr-source-badge" class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-800 text-slate-400 border border-slate-700">Awaiting extraction</span>
           </div>
+
+          <!-- Error container -->
+          <div id="madr-error-container" class="hidden p-3 bg-red-950/80 border border-red-700 text-red-200 rounded-lg text-xs leading-relaxed"></div>
 
           <div class="space-y-2 text-xs">
             <div id="madr-record-display" class="p-3 bg-slate-950 rounded-lg border border-slate-800 space-y-2">
-              <div class="flex items-center gap-2">
-                <span class="bg-emerald-900 text-emerald-300 px-2 py-0.5 rounded font-bold text-[10px]">DECIDED</span>
-                <span class="font-semibold text-slate-200">Keep the C parser</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <span class="bg-red-900 text-red-300 px-2 py-0.5 rounded font-bold text-[10px]">REJECTED</span>
-                <span class="font-semibold text-slate-300">Rewrite in Rust</span>
-              </div>
-              <p class="text-slate-400"><strong class="text-slate-300">Why:</strong> 2x slower on big files compared to the C parser.</p>
-              <p class="text-slate-500 font-mono text-[11px]">Sources: #1832 · #1901 · Discourse Forum</p>
-              <p class="text-slate-500 font-mono text-[11px]">AST Symbol Anchor: <code>parse_token_stream()</code> (lines 40–120)</p>
+              <p class="text-slate-400 italic">Click "Extract with Gemma 4" to analyze the discussion.</p>
             </div>
 
-            <div class="p-3 bg-emerald-950/40 border border-emerald-800/80 rounded-lg">
-              <div class="flex items-center gap-1.5 text-emerald-300 font-semibold text-xs">
-                <span>🛡️</span> Contiguous Quote Verification (Challenge #5)
-              </div>
-              <p id="c-quote-text" class="text-emerald-200/90 italic text-[11px] mt-1">"2x slower on big files compared to the C parser"</p>
-              <div class="flex items-center gap-3 mt-2 text-[10px] text-emerald-400">
-                <span>✓ Contiguous Match: <strong id="c-contiguous-match">TRUE</strong></span>
-                <span>Word Overlap: <strong id="c-word-overlap">100%</strong></span>
-              </div>
+            <!-- Quote Verification Badge -->
+            <div id="madr-quote-container" class="hidden">
+              <div id="madr-quote-badge"></div>
             </div>
 
             <!-- git blame contrast box -->
@@ -170,7 +142,7 @@
                 </div>
                 <div class="bg-emerald-950/30 border border-emerald-900/50 p-2 rounded text-emerald-300">
                   <div class="font-bold mb-1">AetherGit Memory</div>
-                  <code>Vetoed: Rust 2x slower on big files</code><br/>
+                  <code>Vetoed: 2x slower on big files</code><br/>
                   <span class="text-emerald-400/80">Active PR guard protected.</span>
                 </div>
               </div>
@@ -178,16 +150,16 @@
           </div>
         </div>
 
-        <!-- Col 3: PR Simulator & Bot Alert -->
+        <!-- Col 3: PR Firewall -->
         <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
           <div>
-            <h3 class="font-bold text-sm text-slate-200 mb-1">3. PR Firewall &amp; Decisions Bot</h3>
+            <h3 class="font-bold text-sm text-slate-200 mb-1">3. PR Firewall</h3>
             <p class="text-xs text-slate-400 mb-4">Simulate opening a new Pull Request touching <code>parser/core.c</code>.</p>
 
             <div class="space-y-4 text-xs">
               <div>
                 <label class="block text-slate-300 font-medium mb-1">PR Title / Intent:</label>
-                <input id="pr-intent" type="text" value="Rewrite parse_token_stream in Rust for safety" placeholder="e.g. Rewrite parse_token_stream in Rust for safety" oninput="updatePRCheck()" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white font-mono text-xs focus:ring-1 focus:ring-blue-500 outline-none">
+                <input id="pr-intent" type="text" value="Rewrite parser in Rust" placeholder="e.g. Rewrite parser in Rust" oninput="onPRTitleChange(this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white font-mono text-xs focus:ring-1 focus:ring-blue-500 outline-none">
               </div>
 
               <div>
@@ -195,37 +167,43 @@
                   <span>Modified Line Number:</span>
                   <div class="flex items-center gap-2">
                     <label for="line-input" class="text-slate-400 text-xs">Line:</label>
-                    <input id="line-input" type="number" min="1" max="500" value="45" oninput="onLineInputChange(this.value)" class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-center font-mono text-blue-400 text-xs focus:ring-1 focus:ring-blue-500 outline-none">
+                    <input id="line-input" type="number" min="1" max="300" value="45" oninput="onLineInputChange(this.value)" class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-center font-mono text-blue-400 text-xs focus:ring-1 focus:ring-blue-500 outline-none">
                     <span id="line-display" class="font-mono text-blue-400 text-[11px]">(Span 40–120)</span>
                   </div>
                 </div>
-                <!-- Range slider synchronized with input -->
                 <input id="line-slider" type="range" min="1" max="300" value="45" oninput="onLineSliderChange(this.value)" class="w-full accent-blue-500 cursor-pointer">
+                <p id="line-error-msg" class="hidden text-[11px] text-amber-400 mt-1"></p>
               </div>
 
-              <!-- Bug #5 & Bug #6: Decisions Bot Alert with Unclipped SVG Warning Circle Icon -->
-              <div id="decisions-bot-alert" class="bot-alert-anim bg-red-950 border-2 border-red-500 rounded-lg p-3 text-red-200 space-y-1.5">
+              <!-- Decisions Bot Alert (BLOCK) -->
+              <div id="decisions-bot-alert" class="hidden bot-alert-anim bg-red-950 border-2 border-red-500 rounded-lg p-3 text-red-200 space-y-1.5">
                 <div class="flex items-center gap-1.5 font-bold text-red-300">
-                  <!-- Bug #6: Exact unclipped SVG path -->
                   <svg class="w-4 h-4 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
-                  <span>DECISIONS BOT FIREWALL</span>
+                  <span>DECISIONS BOT FIREWALL — MERGE BLOCKED</span>
                 </div>
-                <p class="font-semibold text-xs">"Tried in 2022 and reverted: 2x slower. See #1901."</p>
+                <p id="bot-alert-message" class="font-semibold text-xs leading-snug"></p>
                 <div class="text-[10px] text-red-400/90 leading-tight">
-                  • Anchored Function: <code>parse_token_stream()</code> (lines 40–120)<br/>
-                  • Rejected Mistake: Rewrite in Rust (PR #1901 was 2x slower)<br/>
-                  • Regression Confidence: <strong id="bot-confidence-display">95%</strong>
+                  • Anchored Target: <code>parser/core.c</code> (lines 40–120)<br/>
+                  • Regression Guard: Repeats historical rejected alternative
                 </div>
               </div>
 
-              <!-- Safe Line Range Banner (Visible when slider moved outside lines 40-120) -->
+              <!-- Safe Line Range Banner (SAFE) -->
               <div id="safe-range-banner" class="hidden bg-emerald-950/60 border border-emerald-700/80 rounded-lg p-3 text-emerald-200">
                 <div class="flex items-center gap-1.5 font-bold text-emerald-300 text-xs">
-                  <span>✅</span> Safe Line Range - No Architectural Regression
+                  <span>✅</span> PR Allowed — No Architectural Regression
                 </div>
-                <p class="text-[11px] text-emerald-400/80 mt-1">Changes are outside the critical architectural anchor range (lines 40–120). No historical mistakes repeated.</p>
+                <p id="safe-range-message" class="text-[11px] text-emerald-400/80 mt-1">Changes do not conflict with past architectural decisions.</p>
+              </div>
+
+              <!-- No Decision Banner -->
+              <div id="no-decision-banner" class="bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-300">
+                <div class="flex items-center gap-1.5 font-bold text-slate-200 text-xs">
+                  <span>ℹ️</span> No decision saved yet. Extract one first.
+                </div>
+                <p class="text-[11px] text-slate-400 mt-1">Click "Extract with Gemma 4" above to load the architectural decision record.</p>
               </div>
 
             </div>
@@ -235,118 +213,94 @@
       </div>
     </div>
 
-    <!-- TAB 2: PYTHON PEP SCENARIO -->
-    <!-- Bug #1: hidden class on initial load; Bug #10: responsive md:grid-cols-2 -->
+    <!-- TAB 2: PASTE ANY DISCUSSION SCENARIO -->
     <div id="pep_evaluator" class="hidden space-y-6">
       <div class="bg-slate-900/40 border border-slate-800 p-4 rounded-xl">
-        <h2 class="text-lg font-semibold text-white">Official Page 12 Evaluation Scenario: Python PEP Scoping Recovery</h2>
-        <p class="text-xs text-slate-400 mt-1">Judges provide raw discussions from discuss.python.org without the corresponding PEP document to evaluate whether rejected ideas and reasons can be recovered accurately.</p>
+        <h2 class="text-lg font-semibold text-white">General Discussion Decision Recovery</h2>
+        <p class="text-xs text-slate-400 mt-1">Paste any raw software team discussion thread below to recover the final architectural decision, rejected alternatives, and verbatim evidence quotes.</p>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-3">
-          <label class="block text-xs font-bold text-slate-300">Raw Technical Discussion (discuss.python.org):</label>
-          <textarea id="pep-input" rows="8" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-slate-300 font-mono text-xs focus:ring-1 focus:ring-blue-500 outline-none leading-relaxed">Discussion Thread on Comprehension Scoping (discuss.python.org):
+          <label for="pep-input" class="block text-xs font-bold text-slate-300">Raw Technical Discussion:</label>
+          <textarea id="pep-input" rows="8" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-slate-300 font-mono text-xs focus:ring-1 focus:ring-blue-500 outline-none leading-relaxed">Discussion on Comprehension Scoping:
 In Python 2, list comprehension variables leaked into the outer function scope.
 Several developers proposed retaining Python 2 variable leaking behavior for backward compatibility.
 Core developers rejected retaining variable leakage because leaking comprehension variables creates subtle bugs and shadows outer variables unpredictably.
 The consensus decided that comprehension iteration variables have localized inner scope in Python 3.
 All alternative proposals to leak loop variables or dynamically bind them were firmly rejected.</textarea>
           
-          <!-- Bug #3: run-pep-extraction button with valid JS strings -->
           <button id="run-pep-extraction" onclick="extractPEP()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 px-4 rounded-lg text-xs transition flex items-center justify-center gap-2 cursor-pointer">
-            <span>⚡</span> Recover Decisions with gemma4:e4b
+            <span>⚡</span> Recover Decisions with Gemma 4
           </button>
         </div>
 
         <div id="pep-output-container" class="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-4">
           <div class="flex items-center justify-between">
             <h3 class="font-bold text-sm text-slate-200">Recovered Architectural Consensus</h3>
-            <span id="pep-source-badge" class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-800 text-slate-300 border border-slate-700">cached-demo</span>
+            <span id="pep-source-badge" class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-800 text-slate-400 border border-slate-700">Awaiting recovery</span>
           </div>
+
+          <!-- Error container -->
+          <div id="pep-error-container" class="hidden p-3 bg-red-950/80 border border-red-700 text-red-200 rounded-lg text-xs leading-relaxed"></div>
+
           <div id="pep-results-display" class="p-4 bg-slate-950 rounded-lg border border-slate-800 space-y-2 text-xs">
-            <p><strong>DECIDED:</strong> <span class="text-emerald-400 font-semibold">Comprehension iteration variables have localized inner scope in Python 3</span></p>
-            <p><strong>REJECTED ALTERNATIVE:</strong> <span class="text-red-400 font-semibold">Leaking comprehension variables into enclosing function or module namespace</span></p>
-            <p><strong>WHY:</strong> Variable leaking created subtle bugs and shadowed outer variables unexpectedly.</p>
-            <p><strong>VERBATIM EVIDENCE:</strong> <em class="text-slate-400">"leaking comprehension variables creates subtle bugs and shadows outer variables"</em></p>
-            <div id="pep-trace-badge" class="mt-3 p-2 bg-emerald-950/40 border border-emerald-800 rounded text-[11px] text-emerald-300">
-              ✓ Contiguous Quote Match Verified (TRUE) · Word Overlap: 100%
-            </div>
+            <p class="text-slate-400 italic">Click "Recover Decisions with Gemma 4" to extract the architectural consensus.</p>
+          </div>
+
+          <!-- Quote Verification Badge -->
+          <div id="pep-quote-container" class="hidden">
+            <div id="pep-quote-badge"></div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- TAB 3: RENAME RELINKER & IDENTITY GRAPH -->
-    <!-- Bug #1: hidden class on initial load; Bug #10: responsive md:grid-cols-2 -->
+    <!-- TAB 3: ROADMAP & PLANNED FEATURES -->
     <div id="identity_resolver" class="hidden space-y-6">
       <div class="bg-slate-900/40 border border-slate-800 p-4 rounded-xl">
-        <h2 class="text-lg font-semibold text-white">Problem 06 Technical Considerations #3 &amp; #4</h2>
-        <p class="text-xs text-slate-400 mt-1">Proof of AST rename-resilient relinking and cross-platform contributor identity resolution.</p>
+        <h2 class="text-lg font-semibold text-white">Roadmap &amp; Planned Features</h2>
+        <p class="text-xs text-slate-400 mt-1">Upcoming capabilities designed for large repositories and multi-platform teams.</p>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <!-- Relinker -->
         <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-3">
-          <h3 class="font-bold text-sm text-slate-200">Consideration #3: What if files are renamed AND edited?</h3>
-          <p class="text-xs text-slate-400">Combines 50% function signature match + 50% normalized SequenceMatcher body similarity.</p>
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-sm text-slate-200">Rename-Resilient AST Relinking</h3>
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-amber-950 text-amber-300 border border-amber-700">Planned (not built yet)</span>
+          </div>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            When files are refactored, moved, or renamed, AetherGit's planned relinker combines AST symbol signature matching with code body SequenceMatcher similarity to preserve architectural decision memory across codebase migrations.
+          </p>
 
-          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 font-mono text-[11px] space-y-1">
-            <div class="text-slate-500">Original: parser/core.c (lines 40-120)</div>
-            <div class="text-emerald-400">Renamed:  src/lexer/fast_core.c (lines 45-125)</div>
-            <div class="text-blue-400">Symbol:   parse_token_stream() [Body refactored with fast_next_token]</div>
+          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 font-mono text-[11px] space-y-1 text-slate-400">
+            <div>• Tracks functions across file movements and rename operations.</div>
+            <div>• Prevents historical regression warnings from breaking after renames.</div>
           </div>
 
-          <div id="relink-status-card" class="p-3 bg-emerald-950/50 border border-emerald-800 rounded-lg text-xs space-y-1.5 text-emerald-300">
-            <div class="font-bold flex items-center gap-1.5">
-              <span>✅</span> Relink Successful!
-            </div>
-            <div>Overall Confidence: <strong id="relink-confidence-score">88.5%</strong> (Threshold &gt;= 60%)</div>
-            <div class="text-[11px] text-emerald-400/80">• Signature Match: <span id="relink-sig-score">100%</span> (Weight: 50%)<br/>• SequenceMatcher Ratio: <span id="relink-ratio-score">77.0%</span> (Weight: 50%)</div>
-          </div>
-
-          <button id="run-relink-btn" onclick="runRelink()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 px-4 rounded-lg text-xs transition flex items-center justify-center gap-2 cursor-pointer">
-            <span>⚡</span> Run AST + Difflib Relinker (JS Engine)
+          <button id="run-relink-btn" disabled class="w-full bg-slate-800 text-slate-400 font-medium py-2 px-4 rounded-lg text-xs cursor-not-allowed">
+            Roadmap: AST Relinker (Planned)
           </button>
         </div>
 
-        <!-- Identity: Bug #9 Resolved Canonical Profile Name -->
+        <!-- Identity Graph -->
         <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-3">
-          <h3 class="font-bold text-sm text-slate-200">Consideration #4: Cross-Platform Contributor Graph</h3>
-          <p class="text-xs text-slate-400">Unifies GitHub handles, commit emails, and discuss forum display names into single canonical profiles.</p>
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-sm text-slate-200">Cross-Platform Contributor Graph</h3>
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-amber-950 text-amber-300 border border-amber-700">Planned (not built yet)</span>
+          </div>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Unifies contributor identities across Git commits, GitHub PR handles, and issue trackers into canonical profiles to preserve maintainer consensus authority.
+          </p>
 
-          <div id="contributor-profile-card" class="bg-slate-950 p-3 rounded-lg border border-slate-800 text-xs space-y-3">
-            <!-- Profile 1: Guido van Rossum -->
-            <div class="space-y-1.5">
-              <div class="flex items-center gap-2">
-                <span class="w-8 h-8 rounded-full bg-blue-700 flex items-center justify-center font-bold text-white text-xs shrink-0">GVR</span>
-                <div>
-                  <div class="font-bold text-slate-200">Guido van Rossum (@gvanrossum)</div>
-                  <div class="text-[11px] text-slate-400 font-mono">guido@python.org · discuss.python.org</div>
-                </div>
-              </div>
-              <div class="pt-1 text-[11px] text-slate-400">
-                Unified Aliases: <code>@gvanrossum</code>, <code>guido@python.org</code>, <code>Guido van Rossum (discuss.python.org)</code>
-              </div>
-            </div>
-
-            <!-- Profile 2: Victor Stinner -->
-            <div class="pt-2 border-t border-slate-800 space-y-1.5">
-              <div class="flex items-center gap-2">
-                <span class="w-8 h-8 rounded-full bg-purple-700 flex items-center justify-center font-bold text-white text-xs shrink-0">VS</span>
-                <div>
-                  <div class="font-bold text-slate-200">Victor Stinner (@vstinner)</div>
-                  <div class="text-[11px] text-slate-400 font-mono">vstinner@python.org · discuss.python.org</div>
-                </div>
-              </div>
-              <div class="pt-1 text-[11px] text-slate-400">
-                Unified Aliases: <code>@vstinner</code>, <code>vstinner@python.org</code>, <code>Victor Stinner (discuss.python.org)</code>
-              </div>
-            </div>
+          <div id="contributor-profile-card" class="bg-slate-950 p-3 rounded-lg border border-slate-800 text-xs space-y-2 text-slate-400">
+            <div>• Resolves cross-platform aliases without manual tagging.</div>
+            <div>• Preserves consensus voting weight across disparate platforms.</div>
           </div>
 
-          <button id="run-identity-btn" onclick="runIdentityResolution()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium py-2 px-4 rounded-lg text-xs transition flex items-center justify-center gap-2 cursor-pointer">
-            <span>👥</span> Re-scan Contributor Graph
+          <button id="run-identity-btn" disabled class="w-full bg-slate-800 text-slate-400 font-medium py-2 px-4 rounded-lg text-xs cursor-not-allowed">
+            Roadmap: Contributor Graph (Planned)
           </button>
         </div>
       </div>
@@ -356,59 +310,11 @@ All alternative proposals to leak loop variables or dynamically bind them were f
 
   <!-- Interactive JavaScript logic -->
   <script>
-    // Bug #7: Non-blocking inline toast banner
-    // Cached demo output loaded directly from examples/actual_output.json
-    const CACHED_ACTUAL_OUTPUT = {
-      slide_6_c_parser: {
-        scenario_id: "slide_6_c_parser",
-        status: "decision_recovered",
-        decision_record: {
-          decided: "Keep the C parser",
-          rejected: "Rewrite in Rust",
-          why: "2x slower on big files compared to the C parser",
-          sources: ["#1832", "#1901", "forum"],
-          verbatim_evidence: "2x slower on big files compared to the C parser",
-          bot_warning: "Tried in 2022 and reverted: 2x slower. See #1901."
-        },
-        code_anchor: {
-          file: "parser/core.c",
-          line_range: [40, 120],
-          function_symbol: "parse_token_stream",
-          hunk: "@@ -40,81 +40,81 @@ int parse_token_stream(TokenStream* ts)"
-        },
-        traceability: {
-          verified: true,
-          word_overlap: 1.0,
-          contiguous_match: true,
-          matched_phrase: "2x slower on big files compared to the C parser"
-        }
-      },
-      pep_discussion_recovery: {
-        scenario_id: "pep_discussion_recovery",
-        status: "decision_recovered",
-        decision_record: {
-          decided: "Comprehension iteration variables have localized inner scope in Python 3",
-          rejected: "Leaking comprehension variables into enclosing function or module namespace",
-          why: "Variable leaking created subtle bugs and shadowed outer variables unexpectedly.",
-          sources: ["discuss.python.org", "PEP-572-thread", "#thread-4821"],
-          verbatim_evidence: "leaking comprehension variables creates subtle bugs and shadows outer variables",
-          bot_warning: "Warning: Historical consensus established localized comprehension scoping to prevent variable leakage."
-        },
-        code_anchor: {
-          file: "compiler/symtable.py",
-          line_range: [85, 115],
-          function_symbol: "compile_comprehension_scope"
-        },
-        traceability: {
-          verified: true,
-          word_overlap: 1.0,
-          contiguous_match: true,
-          matched_phrase: "leaking comprehension variables creates subtle bugs and shadows outer variables"
-        }
-      }
-    };
+    // State management
+    let currentExtractedRecord = null;
+    let currentValidLine = 45;
 
-    // Non-blocking inline toast banner
+    // Toast banner
     function showToast(message, type = 'info') {
       const container = document.getElementById('toast-container');
       if (!container) return;
@@ -418,8 +324,19 @@ All alternative proposals to leak loop variables or dynamically bind them were f
                       type === 'error' ? 'bg-red-950 border-red-600 text-red-200' :
                       'bg-slate-900 border-slate-700 text-slate-200';
       toast.className = `p-3 rounded-lg border text-xs shadow-lg transition-all transform duration-300 pointer-events-auto flex items-center justify-between gap-2 ${bgClass}`;
-      toast.innerHTML = `<span>${message}</span><button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-white font-bold ml-2 cursor-pointer">&times;</button>`;
+
+      const textSpan = document.createElement('span');
+      textSpan.textContent = message;
+
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'text-slate-400 hover:text-white font-bold ml-2 cursor-pointer';
+      closeBtn.textContent = '×';
+      closeBtn.onclick = () => toast.remove();
+
+      toast.appendChild(textSpan);
+      toast.appendChild(closeBtn);
       container.appendChild(toast);
+
       setTimeout(() => {
         if (toast.parentElement) {
           toast.style.opacity = '0';
@@ -469,423 +386,414 @@ All alternative proposals to leak loop variables or dynamically bind them were f
         .replace(/'/g, '&#039;');
     }
 
-    // Helper: Update source badge in UI
-    function updateBadge(badgeId, source) {
-      const el = document.getElementById(badgeId);
-      if (!el) return;
-      if (source === 'live-gemma4') {
-        el.className = 'px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-950 text-emerald-300 border border-emerald-700';
-        el.textContent = 'live-gemma4';
-      } else {
-        el.className = 'px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-800 text-slate-300 border border-slate-700';
-        el.textContent = 'cached-demo';
-      }
-    }
-
-    // Bug #2: Fetch wrapper helper with 4s AbortController timeout & cached fallback
-    async function fetchWithFallback(url, options = {}, scenarioKey = null, timeoutMs = 4000) {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-      try {
-        const res = await fetch(url, { ...options, signal: controller.signal });
-        clearTimeout(timeoutId);
-        if (res.ok) {
-          const data = await res.json();
-          data._source = 'live-gemma4';
-          return data;
-        }
-      } catch (err) {
-        clearTimeout(timeoutId);
-        // Silently swallow fetch/timeout error on deployed Vercel without console errors
-      }
-
-      // Return cached fallback matching examples/actual_output.json
-      if (scenarioKey && CACHED_ACTUAL_OUTPUT[scenarioKey]) {
-        const cached = JSON.parse(JSON.stringify(CACHED_ACTUAL_OUTPUT[scenarioKey]));
-        cached._source = 'cached-demo';
-        return cached;
-      }
-
-      return {
-        status: 'online',
-        engine: 'AetherGit Hybrid Engine + gemma4:e4b',
-        model: 'gemma4:e4b',
-        mode: 'cached_fallback',
-        _source: 'cached-demo'
-      };
-    }
-
-    // Bug #1: PR Firewall logic checkPR(line)
-    function checkPR(line) {
-      const lineNum = parseInt(line, 10);
-      if (!isNaN(lineNum) && lineNum >= 40 && lineNum <= 120) {
+    // PR Firewall check function
+    function checkPR(line, prTitle) {
+      if (!currentExtractedRecord || !currentExtractedRecord.rejected || currentExtractedRecord.rejected.toLowerCase() === 'unknown') {
         return {
-          status: 'BLOCK',
-          message: 'Tried in 2022 and reverted: 2x slower. See #1901.',
-          confidence: 95
+          status: 'NO_DECISION',
+          message: 'No decision saved yet. Extract one first.',
+          isRegression: false
         };
       }
+
+      const lineNum = Number(line);
+      const touchesAnchor = Number.isInteger(lineNum) && lineNum >= 40 && lineNum <= 120;
+      if (!touchesAnchor) {
+        return {
+          status: 'SAFE',
+          message: 'Safe Line Range - No Architectural Regression',
+          isRegression: false
+        };
+      }
+
+      const rejectedStr = (currentExtractedRecord.rejected || '').toLowerCase();
+      const titleStr = (prTitle || '').toLowerCase();
+
+      // Words longer than 3 letters
+      const rejectedWords = new Set(rejectedStr.match(/\b[a-zA-Z]{4,}\b/g) || []);
+      const titleWords = new Set(titleStr.match(/\b[a-zA-Z]{4,}\b/g) || []);
+
+      let sharesWord = false;
+      for (const word of titleWords) {
+        if (rejectedWords.has(word)) {
+          sharesWord = true;
+          break;
+        }
+      }
+
+      if (sharesWord) {
+        let msg = `Decision alert: Proposed changes repeat rejected alternative: '${currentExtractedRecord.rejected}'`;
+        if (currentExtractedRecord.reason && currentExtractedRecord.reason.toLowerCase() !== 'unknown') {
+          msg += ` (Reason: ${currentExtractedRecord.reason})`;
+        }
+        return {
+          status: 'BLOCK',
+          message: msg,
+          isRegression: true
+        };
+      }
+
       return {
         status: 'SAFE',
         message: 'Safe Line Range - No Architectural Regression',
-        confidence: 100
+        isRegression: false
       };
     }
     window.checkPR = checkPR;
 
-    function updatePRCheck(lineVal) {
-      const lineInput = document.getElementById('line-input');
-      const sliderInput = document.getElementById('line-slider');
-      const displaySpan = document.getElementById('line-display');
+    function updatePRFirewallUI() {
+      const prIntentInput = document.getElementById('pr-intent');
+      const prTitle = prIntentInput ? prIntentInput.value : '';
+
       const alertBox = document.getElementById('decisions-bot-alert');
       const safeBox = document.getElementById('safe-range-banner');
-      const confSpan = document.getElementById('bot-confidence-display');
+      const noDecisionBox = document.getElementById('no-decision-banner');
+      const alertMsg = document.getElementById('bot-alert-message');
+      const displaySpan = document.getElementById('line-display');
 
-      if (!alertBox || !safeBox) return;
-
-      let currentLine = 45;
-      if (lineVal !== undefined && lineVal !== null && String(lineVal).trim() !== '') {
-        currentLine = parseInt(lineVal, 10);
-      } else if (lineInput && lineInput.value) {
-        currentLine = parseInt(lineInput.value, 10);
-      } else if (sliderInput && sliderInput.value) {
-        currentLine = parseInt(sliderInput.value, 10);
-      }
-
-      if (isNaN(currentLine)) currentLine = 45;
-
-      if (lineInput && parseInt(lineInput.value, 10) !== currentLine) {
-        lineInput.value = currentLine;
-      }
-      if (sliderInput && parseInt(sliderInput.value, 10) !== currentLine && currentLine <= 300) {
-        sliderInput.value = currentLine;
-      }
       if (displaySpan) {
-        displaySpan.textContent = `Line ${currentLine} (Span 40–120)`;
+        displaySpan.textContent = `Line ${currentValidLine} (Span 40–120)`;
       }
 
-      const result = checkPR(currentLine);
+      const result = checkPR(currentValidLine, prTitle);
 
-      if (result.status === 'BLOCK') {
-        alertBox.classList.remove('hidden');
-        safeBox.classList.add('hidden');
-        const alertP = alertBox.querySelector('p');
-        if (alertP) alertP.textContent = `"${result.message}"`;
-        if (confSpan) confSpan.textContent = `${result.confidence}%`;
+      if (result.status === 'NO_DECISION') {
+        if (noDecisionBox) noDecisionBox.classList.remove('hidden');
+        if (alertBox) alertBox.classList.add('hidden');
+        if (safeBox) safeBox.classList.add('hidden');
+      } else if (result.status === 'BLOCK') {
+        if (noDecisionBox) noDecisionBox.classList.add('hidden');
+        if (alertBox) alertBox.classList.remove('hidden');
+        if (safeBox) safeBox.classList.add('hidden');
+        if (alertMsg) alertMsg.textContent = result.message;
       } else {
-        alertBox.classList.add('hidden');
-        safeBox.classList.remove('hidden');
+        if (noDecisionBox) noDecisionBox.classList.add('hidden');
+        if (alertBox) alertBox.classList.add('hidden');
+        if (safeBox) safeBox.classList.remove('hidden');
       }
     }
 
-    function onLineInputChange(val) {
-      updatePRCheck(val);
-    }
+    function onLineInputChange(rawVal) {
+      const str = String(rawVal).trim();
+      const errorEl = document.getElementById('line-error-msg');
 
-    function onLineSliderChange(val) {
-      updatePRCheck(val);
-    }
-
-    // Bug #3: Real Quote Verification verifyQuote(quote, source, minWords = 4)
-    function normalizeQuoteText(text) {
-      if (!text) return '';
-      return String(text)
-        .toLowerCase()
-        .replace(/[*_`"]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-    }
-
-    function verifyQuote(quote, source, minWords = 4) {
-      const normQuote = normalizeQuoteText(quote);
-      const normSource = normalizeQuoteText(source);
-
-      // Extract word tokens for overlap comparison
-      const quoteWords = normQuote.replace(/[.,!?;:()]/g, ' ').split(' ').filter(Boolean);
-      const sourceWords = normSource.replace(/[.,!?;:()]/g, ' ').split(' ').filter(Boolean);
-      const sourceWordSet = new Set(sourceWords);
-
-      const hasMinWords = quoteWords.length >= minWords;
-      const contiguous = hasMinWords && normSource.includes(normQuote);
-
-      let overlap = 0;
-      if (quoteWords.length > 0) {
-        const matched = quoteWords.filter(w => sourceWordSet.has(w));
-        overlap = matched.length / quoteWords.length;
+      if (!/^\d+$/.test(str)) {
+        if (errorEl) {
+          errorEl.textContent = 'Enter a whole number from 1 to 300';
+          errorEl.classList.remove('hidden');
+        }
+        return;
       }
 
-      return {
-        contiguous: contiguous,
-        overlap: overlap,
-        overlapPercent: Math.round(overlap * 100),
-        hasMinWords: hasMinWords,
-        wordCount: quoteWords.length,
-        normQuote: normQuote,
-        normSource: normSource
-      };
+      const num = Number(str);
+      if (!Number.isInteger(num) || num < 1 || num > 300) {
+        if (errorEl) {
+          errorEl.textContent = 'Enter a whole number from 1 to 300';
+          errorEl.classList.remove('hidden');
+        }
+        return;
+      }
+
+      if (errorEl) errorEl.classList.add('hidden');
+      currentValidLine = num;
+
+      const slider = document.getElementById('line-slider');
+      if (slider && Number(slider.value) !== num) {
+        slider.value = num;
+      }
+      updatePRFirewallUI();
     }
-    window.verifyQuote = verifyQuote;
 
-    // Bug #4: Ported Ratcliff/Obershelp SequenceMatcher similarity ratio in JavaScript
-    function sequenceMatcherRatio(s1, s2) {
-      if (s1 === s2) return 1.0;
-      if (!s1 || !s2) return 0.0;
+    function onLineSliderChange(rawVal) {
+      const num = Number(rawVal);
+      if (Number.isInteger(num) && num >= 1 && num <= 300) {
+        currentValidLine = num;
+        const input = document.getElementById('line-input');
+        if (input && Number(input.value) !== num) {
+          input.value = num;
+        }
+        const errorEl = document.getElementById('line-error-msg');
+        if (errorEl) errorEl.classList.add('hidden');
+        updatePRFirewallUI();
+      }
+    }
 
-      function findLongestMatch(alo, ahi, blo, bhi) {
-        let besti = alo, bestj = blo, bestsize = 0;
-        for (let i = alo; i < ahi; i++) {
-          for (let j = blo; j < bhi; j++) {
-            let k = 0;
-            while (i + k < ahi && j + k < bhi && s1[i + k] === s2[j + k]) {
-              k++;
-            }
-            if (k > bestsize) {
-              besti = i;
-              bestj = j;
-              bestsize = k;
-            }
+    function onPRTitleChange(val) {
+      updatePRFirewallUI();
+    }
+
+    // Engine Status Check
+    async function checkStatus(isManual = false) {
+      const dot = document.getElementById('ollama-dot');
+      const text = document.getElementById('ollama-text');
+
+      if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-slate-500 animate-pulse';
+      if (text) text.textContent = 'Checking…';
+
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const res = await fetch('/api/status', { method: 'GET', signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.live) {
+            const modelName = data.model || 'gemma-4-26b-a4b-it';
+            if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500';
+            if (text) text.textContent = `Live · Gemma 4 (${modelName}) via Gemini API`;
+            if (isManual) showToast(`✅ Live AI Online (${modelName}).`, 'success');
+            return;
           }
         }
-        return { i: besti, j: bestj, size: bestsize };
-      }
+      } catch (err) {}
 
-      function getMatchingBlocks(alo, ahi, blo, bhi) {
-        const match = findLongestMatch(alo, ahi, blo, bhi);
-        if (match.size === 0) return [];
-        const left = getMatchingBlocks(alo, match.i, blo, match.j);
-        const right = getMatchingBlocks(match.i + match.size, ahi, match.j + match.size, bhi);
-        return [...left, match, ...right];
-      }
-
-      const matches = getMatchingBlocks(0, s1.length, 0, s2.length);
-      const total = matches.reduce((acc, m) => acc + m.size, 0);
-      return (2.0 * total) / (s1.length + s2.length);
+      if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-red-500';
+      if (text) text.textContent = 'Live AI unavailable';
+      if (isManual) showToast('Live AI is not configured or unavailable on the server.', 'error');
     }
 
-    function calculateRelinkerScore() {
-      const origSig = "parse_token_stream";
-      const targetSig = "parse_token_stream";
-      const origBody = "int parse_token_stream(TokenStream* ts) { while(next_token(ts, &t)) { process(); } }";
-      const targetBody = "int parse_token_stream(TokenStream* ts) { while(fast_next_token(ts, &t)) { process(); } }";
-
-      const sigMatch = origSig === targetSig ? 1.0 : sequenceMatcherRatio(origSig, targetSig);
-      // Normalized body ratio against benchmark anchor (77.0%)
-      const bodyRatio = 0.77;
-      // Formula: 50% * signature match + 50% * SequenceMatcher body ratio
-      const confidence = (0.5 * sigMatch) + (0.5 * bodyRatio);
-
-      return {
-        sigMatch: sigMatch,
-        bodyRatio: bodyRatio,
-        confidence: confidence,
-        passed: confidence >= 0.60
-      };
-    }
-
-    // Engine Status Check: ALWAYS Green, Zero Offline Alerts, with 4s timeout
-    async function checkOllamaStatus(isManual = false) {
-      const statusElement = document.getElementById('ollama-status');
-      const dotElement = document.getElementById('ollama-dot');
-      const textElement = document.getElementById('ollama-text');
-
-      if (!statusElement || !dotElement || !textElement) return;
-
-      statusElement.className = 'flex items-center gap-2 text-xs bg-slate-800/80 px-3 py-1.5 rounded-lg border border-emerald-700/60';
-      dotElement.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse';
-
-      const data = await fetchWithFallback('/api/status', { method: 'GET' }, null, 4000);
-      const source = data._source || 'cached-demo';
-      updateBadge('header-source-badge', source);
-
-      textElement.innerHTML = `Model: <strong class="text-white">gemma4:e4b</strong> (${source === 'live-gemma4' ? 'Local Ollama' : 'Active'})`;
-
-      if (isManual) {
-        showToast(`✅ AetherGit Engine Online (gemma4:e4b / ${source}).`, 'success');
-      }
-    }
-
-    // Wire unwired button to checkOllamaStatus(true)
-    const apiTestBtn = document.getElementById('api-test-btn');
-    if (apiTestBtn) {
-      apiTestBtn.addEventListener('click', () => checkOllamaStatus(true));
-    }
-
-    // Tab 1: Live MADR Extraction with 4s timeout & quote verification
+    // Slide 6 Extraction
     async function extractSlide6() {
-      const resultsElement = document.getElementById('madr-record-display');
-      if (resultsElement) {
-        resultsElement.innerHTML = `<div class="flex items-center gap-2 text-blue-400 font-mono text-xs py-2"><span class="animate-spin text-sm">⚡</span> Extracting architectural decision record with gemma4:e4b...</div>`;
+      const btn = document.getElementById('extract-decision-record-btn');
+      const resultsEl = document.getElementById('madr-record-display');
+      const errorContainer = document.getElementById('madr-error-container');
+      const sourceBadge = document.getElementById('madr-source-badge');
+      const quoteContainer = document.getElementById('madr-quote-container');
+      const quoteBadge = document.getElementById('madr-quote-badge');
+      const inputEl = document.getElementById('slide6-input');
+
+      const discussionText = inputEl ? inputEl.value : '';
+
+      if (errorContainer) {
+        errorContainer.classList.add('hidden');
+        errorContainer.textContent = '';
+      }
+      if (quoteContainer) quoteContainer.classList.add('hidden');
+
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.add('opacity-60', 'cursor-not-allowed');
+        btn.innerHTML = '<span>⏳</span> Gemma is reading the discussion…';
       }
 
-      const data = await fetchWithFallback(
-        '/api/extract',
-        {
+      if (resultsEl) {
+        resultsEl.innerHTML = '<p class="text-blue-400 font-mono text-xs">Gemma is reading the discussion…</p>';
+      }
+
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+        const res = await fetch('/api/extract', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ issue_number: 1832, reverted_pr: 1901 })
-        },
-        'slide_6_c_parser',
-        4000
-      );
+          body: JSON.stringify({ discussion_text: discussionText }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
 
-      const source = data._source || 'cached-demo';
-      updateBadge('madr-source-badge', source);
+        const data = await res.json();
 
-      const record = data.decision_record || data;
-      renderMADR(record);
+        if (!res.ok) {
+          const errMsg = data.error || 'The AI service did not answer.';
+          if (errorContainer) {
+            errorContainer.textContent = errMsg;
+            errorContainer.classList.remove('hidden');
+          }
+          if (resultsEl) {
+            resultsEl.innerHTML = '<p class="text-slate-500 italic">Extraction failed. See error above.</p>';
+          }
+          if (sourceBadge) {
+            sourceBadge.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-red-950 text-red-300 border border-red-700';
+            sourceBadge.textContent = 'error';
+          }
+          showToast(errMsg, 'error');
+          return;
+        }
 
-      // Run real verifyQuote on the C parser demo
-      const quoteText = record.verbatim_evidence || "2x slower on big files compared to the C parser";
-      const forumEl = document.getElementById('c-source-forum-text');
-      const sourceCorpus = forumEl ? forumEl.textContent : "PR #1901 was reverted because the Rust rewrite caused a 2x slower latency regression on big files compared to the C parser.";
-      const quoteCheck = verifyQuote(quoteText, sourceCorpus, 4);
+        const record = data.record || {};
+        currentExtractedRecord = record;
 
-      const quoteDisplay = document.getElementById('c-quote-text');
-      const matchDisplay = document.getElementById('c-contiguous-match');
-      const overlapDisplay = document.getElementById('c-word-overlap');
-      if (quoteDisplay) quoteDisplay.textContent = `"${quoteText}"`;
-      if (matchDisplay) matchDisplay.textContent = quoteCheck.contiguous ? 'TRUE' : 'FALSE';
-      if (overlapDisplay) overlapDisplay.textContent = `${quoteCheck.overlapPercent}%`;
+        if (sourceBadge) {
+          const modelTag = data.model || 'gemma-4-26b-a4b-it';
+          sourceBadge.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-950 text-emerald-300 border border-emerald-700';
+          sourceBadge.textContent = `live · ${modelTag}`;
+        }
 
-      showToast(`✅ Extracted MADR record (${source}).`, 'success');
+        if (resultsEl) {
+          resultsEl.innerHTML = `
+            <div class="flex items-center gap-2">
+              <span class="bg-emerald-900 text-emerald-300 px-2 py-0.5 rounded font-bold text-[10px]">DECIDED</span>
+              <span class="font-semibold text-slate-200">${escapeHtml(record.decided || 'unknown')}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="bg-red-900 text-red-300 px-2 py-0.5 rounded font-bold text-[10px]">REJECTED</span>
+              <span class="font-semibold text-slate-300">${escapeHtml(record.rejected || 'unknown')}</span>
+            </div>
+            <p class="text-slate-400"><strong class="text-slate-300">Reason:</strong> ${escapeHtml(record.reason || 'unknown')}</p>
+            <p class="text-slate-400"><strong class="text-slate-300">Quote:</strong> <em class="text-slate-300">"${escapeHtml(record.quote || 'unknown')}"</em></p>
+            <p class="text-slate-500 font-mono text-[11px]">Target File: <code>${escapeHtml(record.file || 'unknown')}</code></p>
+          `;
+        }
+
+        // Quote verification
+        const quoteCheck = data.quote_check || {};
+        if (quoteContainer && quoteBadge) {
+          quoteContainer.classList.remove('hidden');
+          if (quoteCheck.contiguous) {
+            quoteBadge.className = 'p-2.5 bg-emerald-950/60 border border-emerald-600 rounded-lg text-emerald-200 text-xs flex items-center gap-2';
+            quoteBadge.innerHTML = '<span>✓</span> <span>Quote found in the discussion</span>';
+            showToast('✅ Extracted decision record (live · gemma-4-26b-a4b-it).', 'success');
+          } else {
+            quoteBadge.className = 'p-2.5 bg-amber-950/60 border border-amber-600 rounded-lg text-amber-200 text-xs flex items-center gap-2';
+            quoteBadge.innerHTML = '<span>⚠️</span> <span>Quote NOT found in the discussion — unverified</span>';
+            showToast('⚠️ Quote could not be verified in the discussion.', 'warning');
+          }
+        }
+
+        updatePRFirewallUI();
+
+      } catch (err) {
+        const errMsg = err.name === 'AbortError' ? 'Client timeout: Request took longer than 60 seconds.' : 'Network error communicating with server.';
+        if (errorContainer) {
+          errorContainer.textContent = errMsg;
+          errorContainer.classList.remove('hidden');
+        }
+        if (resultsEl) {
+          resultsEl.innerHTML = '<p class="text-slate-500 italic">Extraction failed. See error above.</p>';
+        }
+        showToast(errMsg, 'error');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.classList.remove('opacity-60', 'cursor-not-allowed');
+          btn.innerHTML = '<span>⚡</span> Extract with Gemma 4';
+        }
+      }
     }
 
-    function renderMADR(data) {
-      const resultsElement = document.getElementById('madr-record-display');
-      if (!resultsElement) return;
-      const decided = data.decided || 'Keep the C parser';
-      const rejected = data.rejected || 'Rewrite in Rust';
-      const why = data.why || '2x slower on big files compared to the C parser.';
-      const sources = Array.isArray(data.sources) ? data.sources.join(' · ') : '#1832 · #1901 · Discourse Forum';
-      const symbol = data.code_anchor?.function_symbol || data.symbol_anchor?.symbol || 'parse_token_stream()';
-      const lines = data.code_anchor?.line_range ? `${data.code_anchor.line_range[0]}–${data.code_anchor.line_range[1]}` : (data.symbol_anchor?.lines || '40–120');
-
-      resultsElement.innerHTML = `
-        <div class="flex items-center gap-2">
-          <span class="bg-emerald-900 text-emerald-300 px-2 py-0.5 rounded font-bold text-[10px]">DECIDED</span>
-          <span class="font-semibold text-slate-200">${escapeHtml(decided)}</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="bg-red-900 text-red-300 px-2 py-0.5 rounded font-bold text-[10px]">REJECTED</span>
-          <span class="font-semibold text-slate-300">${escapeHtml(rejected)}</span>
-        </div>
-        <p class="text-slate-400"><strong class="text-slate-300">Why:</strong> ${escapeHtml(why)}</p>
-        <p class="text-slate-500 font-mono text-[11px]">Sources: ${escapeHtml(sources)}</p>
-        <p class="text-slate-500 font-mono text-[11px]">AST Symbol Anchor: <code>${escapeHtml(symbol)}</code> (lines ${escapeHtml(lines)})</p>
-      `;
-    }
-
-    // Tab 2: PEP Scoping Recovery with 4s timeout & real quote verification
+    // PEP / General Discussion Extraction
     async function extractPEP() {
-      const resultsElement = document.getElementById('pep-results-display');
+      const btn = document.getElementById('run-pep-extraction');
+      const resultsEl = document.getElementById('pep-results-display');
+      const errorContainer = document.getElementById('pep-error-container');
+      const sourceBadge = document.getElementById('pep-source-badge');
+      const quoteContainer = document.getElementById('pep-quote-container');
+      const quoteBadge = document.getElementById('pep-quote-badge');
       const inputEl = document.getElementById('pep-input');
-      const inputText = inputEl ? inputEl.value : '';
 
-      if (resultsElement) {
-        resultsElement.innerHTML = `<div class="flex items-center gap-2 text-blue-400 font-mono text-xs py-2"><span class="animate-spin text-sm">⚡</span> Running architectural recovery on discussion thread with gemma4:e4b...</div>`;
+      const discussionText = inputEl ? inputEl.value : '';
+
+      if (errorContainer) {
+        errorContainer.classList.add('hidden');
+        errorContainer.textContent = '';
+      }
+      if (quoteContainer) quoteContainer.classList.add('hidden');
+
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.add('opacity-60', 'cursor-not-allowed');
+        btn.innerHTML = '<span>⏳</span> Gemma is reading the discussion…';
       }
 
-      const data = await fetchWithFallback(
-        '/api/evaluate-pep',
-        {
+      if (resultsEl) {
+        resultsEl.innerHTML = '<p class="text-blue-400 font-mono text-xs">Gemma is reading the discussion…</p>';
+      }
+
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+        const res = await fetch('/api/extract', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ discussion_text: inputText })
-        },
-        'pep_discussion_recovery',
-        4000
-      );
+          body: JSON.stringify({ discussion_text: discussionText }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
 
-      const source = data._source || 'cached-demo';
-      updateBadge('pep-source-badge', source);
+        const data = await res.json();
 
-      const record = data.decision_record || data;
-      const quoteText = record.verbatim_evidence || record.verbatim_quote || "leaking comprehension variables creates subtle bugs and shadows outer variables";
-      const quoteCheck = verifyQuote(quoteText, inputText, 4);
-
-      renderPEPResults(record, quoteCheck);
-      showToast(`✅ Recovered architectural consensus (${source}).`, 'success');
-    }
-
-    function renderPEPResults(data, quoteCheck) {
-      const resultsElement = document.getElementById('pep-results-display');
-      if (!resultsElement) return;
-
-      const decided = data.decided || 'Comprehension iteration variables have localized inner scope in Python 3';
-      const rejected = data.rejected || 'Leaking comprehension variables into enclosing function or module namespace';
-      const why = data.why || 'Variable leaking created subtle bugs and shadowed outer variables unexpectedly.';
-      const quote = data.verbatim_evidence || data.verbatim_quote || 'leaking comprehension variables creates subtle bugs and shadows outer variables';
-
-      const isContiguous = quoteCheck ? quoteCheck.contiguous : true;
-      const overlapPct = quoteCheck ? quoteCheck.overlapPercent : 100;
-
-      resultsElement.innerHTML = `
-        <p><strong>DECIDED:</strong> <span class="text-emerald-400 font-semibold">${escapeHtml(decided)}</span></p>
-        <p><strong>REJECTED ALTERNATIVE:</strong> <span class="text-red-400 font-semibold">${escapeHtml(rejected)}</span></p>
-        <p><strong>WHY:</strong> ${escapeHtml(why)}</p>
-        <p><strong>VERBATIM EVIDENCE:</strong> <em class="text-slate-400">"${escapeHtml(quote)}"</em></p>
-        <div id="pep-trace-badge" class="mt-3 p-2 bg-emerald-950/40 border border-emerald-800 rounded text-[11px] text-emerald-300">
-          ✓ Contiguous Quote Match Verified (${isContiguous ? 'TRUE' : 'FALSE'}) · Word Overlap: ${overlapPct}%
-        </div>
-      `;
-    }
-
-    // Tab 3: Interactive Relinker and Identity Resolution
-    async function runRelink() {
-      const btn = document.getElementById('run-relink-btn');
-      const card = document.getElementById('relink-status-card');
-      const score = document.getElementById('relink-confidence-score');
-      const sigSpan = document.getElementById('relink-sig-score');
-      const ratioSpan = document.getElementById('relink-ratio-score');
-      if (btn) btn.innerHTML = '<span>⚡</span> Calculating AST + Difflib Match...';
-
-      // Ported JavaScript calculation runs in browser
-      const result = calculateRelinkerScore();
-
-      setTimeout(() => {
-        if (score) score.textContent = `${(result.confidence * 100).toFixed(1)}%`;
-        if (sigSpan) sigSpan.textContent = `${Math.round(result.sigMatch * 100)}%`;
-        if (ratioSpan) ratioSpan.textContent = `${(result.bodyRatio * 100).toFixed(1)}%`;
-
-        if (card) {
-          card.classList.add('ring-2', 'ring-emerald-400');
-          setTimeout(() => card.classList.remove('ring-2', 'ring-emerald-400'), 2000);
+        if (!res.ok) {
+          const errMsg = data.error || 'The AI service did not answer.';
+          if (errorContainer) {
+            errorContainer.textContent = errMsg;
+            errorContainer.classList.remove('hidden');
+          }
+          if (resultsEl) {
+            resultsEl.innerHTML = '<p class="text-slate-500 italic">Extraction failed. See error above.</p>';
+          }
+          if (sourceBadge) {
+            sourceBadge.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-red-950 text-red-300 border border-red-700';
+            sourceBadge.textContent = 'error';
+          }
+          showToast(errMsg, 'error');
+          return;
         }
 
-        showToast(`✅ Relink verified: ${(result.confidence * 100).toFixed(1)}% confidence match (50% sig + 50% ratio).`, 'success');
-        if (btn) btn.innerHTML = '<span>⚡</span> Run AST + Difflib Relinker (JS Engine)';
-      }, 200);
-    }
+        const record = data.record || {};
 
-    async function runIdentityResolution() {
-      const btn = document.getElementById('run-identity-btn');
-      const card = document.getElementById('contributor-profile-card');
-      if (btn) btn.innerHTML = '<span>👥</span> Scanning Platform Aliases...';
-
-      setTimeout(() => {
-        if (card) {
-          card.classList.add('ring-2', 'ring-blue-400');
-          setTimeout(() => card.classList.remove('ring-2', 'ring-blue-400'), 2000);
+        if (sourceBadge) {
+          const modelTag = data.model || 'gemma-4-26b-a4b-it';
+          sourceBadge.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-950 text-emerald-300 border border-emerald-700';
+          sourceBadge.textContent = `live · ${modelTag}`;
         }
-        showToast('✅ Re-scanned and unified 2 contributor profiles across GitHub, Git commits, and Discourse.', 'success');
-        if (btn) btn.innerHTML = '<span>👥</span> Re-scan Contributor Graph';
-      }, 300);
-    }
 
-    // On page load: ensure sensible default PR intent, update PR check, and check engine
-    document.addEventListener('DOMContentLoaded', () => {
-      const intentInput = document.getElementById('pr-intent');
-      if (intentInput && !intentInput.value) {
-        intentInput.value = 'Rewrite parse_token_stream in Rust for safety';
+        if (resultsEl) {
+          resultsEl.innerHTML = `
+            <div class="flex items-center gap-2">
+              <span class="bg-emerald-900 text-emerald-300 px-2 py-0.5 rounded font-bold text-[10px]">DECIDED</span>
+              <span class="font-semibold text-slate-200">${escapeHtml(record.decided || 'unknown')}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="bg-red-900 text-red-300 px-2 py-0.5 rounded font-bold text-[10px]">REJECTED</span>
+              <span class="font-semibold text-slate-300">${escapeHtml(record.rejected || 'unknown')}</span>
+            </div>
+            <p class="text-slate-400"><strong class="text-slate-300">Reason:</strong> ${escapeHtml(record.reason || 'unknown')}</p>
+            <p class="text-slate-400"><strong class="text-slate-300">Quote:</strong> <em class="text-slate-300">"${escapeHtml(record.quote || 'unknown')}"</em></p>
+            <p class="text-slate-500 font-mono text-[11px]">Target File: <code>${escapeHtml(record.file || 'unknown')}</code></p>
+          `;
+        }
+
+        const quoteCheck = data.quote_check || {};
+        if (quoteContainer && quoteBadge) {
+          quoteContainer.classList.remove('hidden');
+          if (quoteCheck.contiguous) {
+            quoteBadge.className = 'p-2.5 bg-emerald-950/60 border border-emerald-600 rounded-lg text-emerald-200 text-xs flex items-center gap-2';
+            quoteBadge.innerHTML = '<span>✓</span> <span>Quote found in the discussion</span>';
+            showToast('✅ Extracted consensus decision (live · gemma-4-26b-a4b-it).', 'success');
+          } else {
+            quoteBadge.className = 'p-2.5 bg-amber-950/60 border border-amber-600 rounded-lg text-amber-200 text-xs flex items-center gap-2';
+            quoteBadge.innerHTML = '<span>⚠️</span> <span>Quote NOT found in the discussion — unverified</span>';
+            showToast('⚠️ Quote could not be verified in the discussion.', 'warning');
+          }
+        }
+
+      } catch (err) {
+        const errMsg = err.name === 'AbortError' ? 'Client timeout: Request took longer than 60 seconds.' : 'Network error communicating with server.';
+        if (errorContainer) {
+          errorContainer.textContent = errMsg;
+          errorContainer.classList.remove('hidden');
+        }
+        if (resultsEl) {
+          resultsEl.innerHTML = '<p class="text-slate-500 italic">Extraction failed. See error above.</p>';
+        }
+        showToast(errMsg, 'error');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.classList.remove('opacity-60', 'cursor-not-allowed');
+          btn.innerHTML = '<span>⚡</span> Recover Decisions with Gemma 4';
+        }
       }
-      updatePRCheck(45);
-      checkOllamaStatus(false);
-    });
+    }
 
-    // Fallback immediate execution
-    updatePRCheck(45);
+    // Page initialization
+    document.addEventListener('DOMContentLoaded', () => {
+      updatePRFirewallUI();
+      checkStatus(false);
+    });
   </script>
-<!-- Bug #4: Properly closed tags -->
 </body>
 </html>
