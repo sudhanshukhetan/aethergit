@@ -1,0 +1,11 @@
+"""WSGI entrypoint for Vercel / serverless runtimes."""
+
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from app import app, application, handler
+
+__all__ = ["app", "application", "handler"]
+

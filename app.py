@@ -12,20 +12,8 @@ Provides:
 import json
 import os
 import sys
+from http.server import BaseHTTPRequestHandler
 from typing import Any, Dict
-
-from src.engine import (
-    DEFAULT_MODEL,
-    detect_local_gemma_model,
-    evaluate_pr_regression_with_gemma,
-    extract_decision_record_with_gemma,
-    parse_diff_and_symbol_anchor,
-    relink_symbol_across_repo,
-    resolve_contributor_identities,
-    score_and_rank_discussion,
-    verify_source_traceability,
-)
-from src.cli import compare_with_git_blame, format_madr_markdown
 
 
 # =========================================================================
@@ -80,27 +68,54 @@ async def asgi_app(scope, receive, send):
         })
 
 
-class UniversalHandler:
-    """Universal callable supporting WSGI (environ, start_response) and ASGI (scope, receive, send)."""
+class UniversalHandler(BaseHTTPRequestHandler):
+    """Universal handler supporting WSGI (environ, start_response), ASGI (scope, receive, send), and BaseHTTPRequestHandler."""
+
+    def __init__(self, *args, **kwargs):
+        if args or kwargs:
+            try:
+                super().__init__(*args, **kwargs)
+            except Exception:
+                pass
 
     def __call__(self, *args, **kwargs):
         if len(args) == 3:
             return asgi_app(args[0], args[1], args[2])
         return wsgi_application(args[0], args[1])
 
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.end_headers()
+        html_path = os.path.join(os.path.dirname(__file__), "index.html")
+        if os.path.exists(html_path):
+            with open(html_path, "rb") as f:
+                self.wfile.write(f.read())
+        else:
+            self.wfile.write(b"<h1>AetherGit Dashboard</h1>")
+
 
 # Top-level exports required by deployment platforms (Vercel, Render, AWS Lambda, WSGI/ASGI)
 app = UniversalHandler()
 application = app
-handler = app
+handler = UniversalHandler
 
 
-# =========================================================================
-# STREAMLIT UI RUNNER
-# =========================================================================
-def run_streamlit_app():
-    """Renders the full Streamlit UI when executed via 'streamlit run app.py'."""
+def run_streamlit_dashboard():
+    """Interactive Streamlit application runner."""
     import streamlit as st
+    from src.engine import (
+        DEFAULT_MODEL,
+        detect_local_gemma_model,
+        evaluate_pr_regression_with_gemma,
+        extract_decision_record_with_gemma,
+        parse_diff_and_symbol_anchor,
+        relink_symbol_across_repo,
+        resolve_contributor_identities,
+        score_and_rank_discussion,
+        verify_source_traceability,
+    )
+    from src.cli import compare_with_git_blame, format_madr_markdown
 
     st.set_page_config(
         page_title="AetherGit · Open Source Decision Intelligence",
@@ -152,15 +167,16 @@ def run_streamlit_app():
         "🔗 Rename Relinker & Identity Graph",
     ])
 
-    # -------------------------------------------------------------------------
-    # TAB 1: SLIDE 6 FLOW
-    # -------------------------------------------------------------------------
+    # =========================================================================
+    # TAB 1: SLIDE 6 FLOW + WHY GIT BLAME FAILS
+    # =========================================================================
     with tab1:
         st.markdown("### The Real-World Maintainer Problem (Slide 6 & Blueprint)")
         st.caption("How AetherGit mines 140+ reply discussions, extracts verifiable MADR records, anchors to code symbols, and fires PR regression alerts.")
 
         col1, col2, col3 = st.columns([1, 1.2, 1.1])
 
+        # COLUMN 1: RAW THREADS
         with col1:
             st.markdown("#### 1. Signal-Weighted Thread Mining")
             st.info("Input Corpus: Issue #1832 (142 replies), Reverted PR #1901, and 2022 Forum Thread")
@@ -189,8 +205,11 @@ def run_streamlit_app():
 
             st.button("⚡ Extract Decision Record with gemma4:e4b", type="primary", use_container_width=True)
 
+        # COLUMN 2: RECOVERED MADR RECORD & GIT BLAME COMPARISON
         with col2:
             st.markdown("#### 2. Recovered Architectural Memory")
+
+            # Load Scenario 1 bundle
             bundle_slide6 = {
                 "scenario_id": "slide_6_c_parser",
                 "raw_text": "Issue #1832 (142 replies) & Reverted PR #1901: In 2022 benchmark runs, the Rust rewrite was 2x slower on big files compared to the C parser. We reverted #1901 and decided to keep the C parser.",
@@ -212,6 +231,7 @@ def run_streamlit_app():
                 unsafe_allow_html=True,
             )
 
+            # Traceability Verification Badge
             trace = record_s6.get("traceability", {})
             if not trace:
                 trace = verify_source_traceability(record_s6, bundle_slide6["raw_text"])
@@ -227,6 +247,7 @@ def run_streamlit_app():
                 unsafe_allow_html=True,
             )
 
+            # Standard git blame vs AetherGit comparison box
             st.markdown("##### Why Standard `git blame` Fails:")
             comp_blame = compare_with_git_blame("parser/core.c", 45, record_s6)
             col_blame_1, col_blame_2 = st.columns(2)
@@ -235,6 +256,7 @@ def run_streamlit_app():
             with col_blame_2:
                 st.success("**AetherGit Recovered Memory (100%)**\n\n`Vetoed: Rust rewrite 2x slower on big files.`\n\nPoints directly to #1832 and active PR guard.")
 
+        # COLUMN 3: INTERACTIVE PR SIMULATOR & BOT ALERT
         with col3:
             st.markdown("#### 3. PR Firewall & Decisions Bot")
             st.caption("Simulate a developer opening a new Pull Request against `parser/core.c`.")
@@ -272,12 +294,12 @@ def run_streamlit_app():
                     unsafe_allow_html=True,
                 )
 
-    # -------------------------------------------------------------------------
-    # TAB 2: PYTHON PEP SCENARIO
-    # -------------------------------------------------------------------------
+    # =========================================================================
+    # TAB 2: LIVE PYTHON PEP / RAW THREAD EVALUATOR
+    # =========================================================================
     with tab2:
         st.markdown("### Official Page 12 Evaluation Scenario: Python PEP Scoping Recovery")
-        st.info("Judges test systems by providing raw discussions without the corresponding PEP document to evaluate whether rejected ideas and reasons can be recovered.")
+        st.info("The judges test systems by providing raw discussions without the corresponding PEP document to evaluate whether rejected ideas and reasons can be recovered.")
 
         sample_pep_thread = (
             "Discussion Thread on Comprehension Scoping (discuss.python.org):\n"
@@ -317,7 +339,7 @@ def run_streamlit_app():
                         f"""
                         <div class='card-box'>
                             <h4>🛡️ Verifiable Traceability Verification</h4>
-                            <p><strong>Verbatim Quote:</strong><br/><em>\"{pep_record.get('verbatim_evidence')}\"</em></p>
+                            <p><strong>Verbatim Quote:</strong><br/><em>"{pep_record.get('verbatim_evidence')}"</em></p>
                             <p><strong>Contiguous Phrase Match:</strong> <code>{pep_trace.get('contiguous_match')}</code></p>
                             <p><strong>Content Word Overlap:</strong> <code>{int(pep_trace.get('word_overlap', 0.90) * 100)}%</code></p>
                             <small style='color:#94a3b8;'>Status: {pep_trace.get('reason')}</small>
@@ -326,9 +348,9 @@ def run_streamlit_app():
                         unsafe_allow_html=True,
                     )
 
-    # -------------------------------------------------------------------------
+    # =========================================================================
     # TAB 3: RENAME RELINKER & IDENTITY GRAPH
-    # -------------------------------------------------------------------------
+    # =========================================================================
     with tab3:
         st.markdown("### Problem 06 Technical Considerations #3 & #4")
         col_rel, col_id = st.columns(2)
@@ -395,14 +417,14 @@ def run_streamlit_app():
     st.caption("AetherGit · Problem 06 Open Source Decision Intelligence · Hacktoberfest 2026 Hack Day Sonipat")
 
 
-# Auto-run Streamlit when invoked via streamlit run
-def is_streamlit_invoked():
-    try:
-        from streamlit.runtime.scriptrunner import get_script_run_context
-        return get_script_run_context() is not None
-    except Exception:
-        return False
+# Automatically run Streamlit dashboard when executed inside Streamlit runtime
+_is_in_streamlit = False
+try:
+    import streamlit as st
+    if hasattr(st, "runtime") and st.runtime.exists():
+        _is_in_streamlit = True
+except Exception:
+    _is_in_streamlit = False
 
-
-if is_streamlit_invoked() or os.environ.get("STREAMLIT_SERVER_PORT") or any("streamlit" in arg for arg in sys.argv):
-    run_streamlit_app()
+if _is_in_streamlit or (not os.environ.get("VERCEL") and __name__ == "__main__"):
+    run_streamlit_dashboard()
