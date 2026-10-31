@@ -63,12 +63,10 @@ def serve_frontend(path=""):
 @app.route("/api/status", methods=["GET"])
 def api_status():
     """Returns local engine and Ollama availability status. Always returns 200."""
-    model_info = detect_local_gemma_model(DEFAULT_MODEL)
-    is_live = model_info.get("available") and not model_info.get("is_mock")
     return jsonify({
         "status": "online",
-        "engine": "AetherGit Python Engine + gemma4:e4b",
-        "mode": "local_ollama" if is_live else "hybrid_deterministic_engine",
+        "engine": "cached demo data (no AI on the hosted server)",
+        "mode": "cached-demo",
         "model": "gemma4:e4b",
         "version": "1.0.0",
         "ci_mode": os.environ.get("CI") == "true",
@@ -130,7 +128,7 @@ def api_extract():
 
     data = request.get_json(silent=True) or {}
     raw_text = data.get("issue_text") or (
-        "Issue #1832 (142 replies) & Reverted PR #1901: In 2022 benchmark runs, the Rust rewrite was 2x slower on big files compared to the C parser. We reverted #1901 and decided to keep the C parser."
+        "Issue #1832 (140 replies) & Reverted PR #1901: In 2022 benchmark runs, the Rust rewrite was 2x slower on big files compared to the C parser. We reverted #1901 and decided to keep the C parser."
     )
     diff_header = data.get("diff_header") or "diff --git a/parser/core.c b/parser/core.c\n@@ -40,80 +40,80 @@ int parse_token_stream(TokenStream* ts)"
     code_snippet = data.get("code_snippet") or "int parse_token_stream(TokenStream* ts) { /* C implementation */ }"
