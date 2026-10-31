@@ -2,29 +2,18 @@
 
 Problem 06: Open Source Decision Intelligence and Knowledge Recovery
 Hacktoberfest 2026 - Hack Day Sonipat
-Model: gemma4:e4b (via local Ollama)
+Model: Gemma 4 (gemma-4-26b-a4b-it via Google Gemini API)
 """
 
 import json
 import os
 import re
-import sys
+import time
+from collections import defaultdict
 from pathlib import Path
 
+import requests
 from flask import Flask, Response, jsonify, request
-
-from src.cli import compare_with_git_blame, format_madr_markdown
-from src.engine import (
-    DEFAULT_MODEL,
-    detect_local_gemma_model,
-    evaluate_pr_regression_with_gemma,
-    extract_decision_record_with_gemma,
-    parse_diff_and_symbol_anchor,
-    relink_symbol_across_repo,
-    resolve_contributor_identities,
-    score_and_rank_discussion,
-    verify_source_traceability,
-)
 
 HTML_PATH = Path(__file__).resolve().parent / "index.html"
 
@@ -33,10 +22,238 @@ app = Flask(__name__)
 application = app
 handler = app
 
+# In-memory IP rate limiter: max 10 requests per minute per IP
+_ip_request_timestamps = defaultdict(list)
+
+
+def is_rate_limited(ip: str, limit: int = 10, window_seconds: int = 60) -> bool:
+    """Best-effort in-memory sliding window rate limiter."""
+    now = time.time()
+    timestamps = _ip_request_timestamps[ip]
+    _ip_request_timestamps[ip] = [t for t in timestamps if now - t < window_seconds]
+    if len(_ip_request_timestamps[ip]) >= limit:
+        return True
+    _ip_request_timestamps[ip].append(now)
+    return False
+
+
+def normalize_text(text: str) -> str:
+    """Normalizes text by lowercasing, stripping punctuation, and collapsing whitespace."""
+    if not text:
+        return ""
+    t = text.lower()
+    t = re.sub(r"[^\w\s]", " ", t)
+    return " ".join(t.split())
+
+
+def server_quote_check(quote: str, discussion: str) -> dict:
+    """Performs verifiable quote check on the server against exact discussion text."""
+    norm_quote = normalize_text(quote)
+    norm_disc = normalize_text(discussion)
+
+    quote_words = norm_quote.split()
+    disc_words = norm_disc.split()
+    disc_word_set = set(disc_words)
+
+    has_min_words = len(quote_words) >= 4
+    contiguous = has_min_words and (norm_quote in norm_disc)
+
+    if quote_words:
+        matched = [w for w in quote_words if w in disc_word_set]
+        overlap = round(len(matched) / len(quote_words), 4)
+    else:
+        overlap = 0.0
+
+    return {
+        "contiguous": contiguous,
+        "word_overlap": overlap,
+    }
+
+
+def extract_first_json_block(text: str) -> dict:
+    """Extracts the first balanced {...} JSON block from response text."""
+    start_idx = text.find("{")
+    if start_idx == -1:
+        raise ValueError("No JSON object found")
+
+    brace_count = 0
+    in_string = False
+    escape = False
+    end_idx = -1
+
+    for i in range(start_idx, len(text)):
+        c = text[i]
+        if escape:
+            escape = False
+            continue
+        if c == "\\":
+            escape = True
+            continue
+        if c == '"':
+            in_string = not in_string
+            continue
+        if not in_string:
+            if c == "{":
+                brace_count += 1
+            elif c == "}":
+                brace_count -= 1
+                if brace_count == 0:
+                    end_idx = i + 1
+                    break
+
+    if end_idx != -1:
+        return json.loads(text[start_idx:end_idx])
+
+    match = re.search(r"\{[\s\S]*?\}", text)
+    if match:
+        return json.loads(match.group(0))
+
+    raise ValueError("Invalid JSON block")
+
+
+def call_gemma_api(discussion_text: str):
+    """Executes server-side Gemma 4 inference with 1 retry on malformed JSON."""
+    provider = os.environ.get("AI_PROVIDER", "gemini").lower()
+    model = os.environ.get("GEMMA_MODEL", "gemma-4-26b-a4b-it")
+
+    prompt = (
+        "You read a software team discussion and find the final decision.\n"
+        "Use ONLY information written in the discussion. Never guess.\n"
+        "If something is missing, write \"unknown\".\n"
+        "Reply with JSON only, no other text, exactly:\n"
+        "{\"decided\":\"...\",\"rejected\":\"...\",\"reason\":\"...\",\"quote\":\"words copied exactly from the discussion that show the reason\",\"file\":\"...\"}\n\n"
+        f"Discussion:\n{discussion_text}"
+    )
+
+    if provider == "ollama":
+        ollama_url = os.environ.get("OLLAMA_URL", "http://localhost:11434").rstrip("/")
+        payload = {
+            "model": "gemma4:e4b",
+            "prompt": prompt,
+            "stream": False,
+        }
+        for attempt in range(2):
+            try:
+                resp = requests.post(f"{ollama_url}/api/generate", json=payload, timeout=45)
+                if resp.status_code == 429:
+                    return None, ("Rate limit reached. Try again in a minute.", 429)
+                if resp.status_code != 200:
+                    continue
+                data = resp.json()
+                raw_answer = data.get("response", "")
+                parsed = extract_first_json_block(raw_answer)
+                record = {
+                    "decided": str(parsed.get("decided", "unknown")),
+                    "rejected": str(parsed.get("rejected", "unknown")),
+                    "reason": str(parsed.get("reason", "unknown")),
+                    "quote": str(parsed.get("quote", "unknown")),
+                    "file": str(parsed.get("file", "unknown")),
+                }
+                return record, None
+            except Exception:
+                if attempt == 1:
+                    return None, ("The AI service did not answer.", 502)
+        return None, ("The AI service did not answer.", 502)
+
+    # Default: Google Gemini API Provider
+    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if not api_key:
+        return None, ("Live AI is not configured on the server.", 503)
+
+    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+    headers = {
+        "Content-Type": "application/json",
+        "x-goog-api-key": api_key,
+    }
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": prompt}],
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0,
+        },
+    }
+
+    for attempt in range(2):
+        try:
+            resp = requests.post(endpoint, headers=headers, json=payload, timeout=45)
+            if resp.status_code == 429:
+                return None, ("Rate limit reached. Try again in a minute.", 429)
+            if resp.status_code != 200:
+                continue
+            res_json = resp.json()
+            candidates = res_json.get("candidates", [])
+            if not candidates:
+                continue
+            parts = candidates[0].get("content", {}).get("parts", [])
+            # Read answer by joining text, skipping any part marked "thought": true
+            text_parts = [p.get("text", "") for p in parts if not p.get("thought")]
+            full_text = "".join(text_parts)
+            parsed = extract_first_json_block(full_text)
+            record = {
+                "decided": str(parsed.get("decided", "unknown")),
+                "rejected": str(parsed.get("rejected", "unknown")),
+                "reason": str(parsed.get("reason", "unknown")),
+                "quote": str(parsed.get("quote", "unknown")),
+                "file": str(parsed.get("file", "unknown")),
+            }
+            return record, None
+        except Exception:
+            if attempt == 1:
+                return None, ("The AI service did not answer.", 502)
+    return None, ("The AI service did not answer.", 502)
+
+
+def check_pr_regression(pr_title: str, line_number: int, rejected_text: str, reason_text: str = ""):
+    """Evaluates PR regression against historical anchor line range and whole-word matching."""
+    if not rejected_text or rejected_text.strip().lower() == "unknown":
+        return {
+            "status": "NO_DECISION",
+            "message": "No decision saved yet. Extract one first.",
+            "is_regression": False,
+            "touches_anchor": 40 <= line_number <= 120,
+        }
+
+    touches_anchor = 40 <= line_number <= 120
+    if not touches_anchor:
+        return {
+            "status": "SAFE",
+            "message": "Safe Line Range - No Architectural Regression",
+            "is_regression": False,
+            "touches_anchor": False,
+        }
+
+    # Find whole words longer than 3 letters
+    rejected_words = set(re.findall(r"\b[a-zA-Z]{4,}\b", rejected_text.lower()))
+    title_words = set(re.findall(r"\b[a-zA-Z]{4,}\b", pr_title.lower()))
+
+    shared_words = rejected_words.intersection(title_words)
+    if shared_words:
+        msg = f"Decision alert: Proposed changes repeat rejected alternative: '{rejected_text}'"
+        if reason_text and reason_text.lower() != "unknown":
+            msg += f" (Reason: {reason_text})"
+        return {
+            "status": "BLOCK",
+            "message": msg,
+            "is_regression": True,
+            "touches_anchor": True,
+            "shared_words": list(shared_words),
+        }
+
+    return {
+        "status": "SAFE",
+        "message": "Safe Line Range - No Architectural Regression",
+        "is_regression": False,
+        "touches_anchor": True,
+    }
+
 
 @app.after_request
 def add_cors_headers(response):
-    """Permit cross-origin requests from any frontend or origin."""
+    """Permit cross-origin requests from any frontend."""
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
     response.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS"
@@ -58,225 +275,95 @@ def serve_frontend(path=""):
 
 
 # =========================================================================
-# REST API ENDPOINTS POWERED BY src/engine.py
+# REST API ENDPOINTS
 # =========================================================================
 @app.route("/api/status", methods=["GET"])
 def api_status():
-    """Returns local engine and Ollama availability status. Always returns 200."""
-    model_info = detect_local_gemma_model(DEFAULT_MODEL)
-    is_live = model_info.get("available") and not model_info.get("is_mock")
-    return jsonify({
-        "status": "online",
-        "engine": "AetherGit Python Engine + gemma4:e4b",
-        "mode": "local_ollama" if is_live else "hybrid_deterministic_engine",
-        "model": "gemma4:e4b",
-        "version": "1.0.0",
-        "ci_mode": os.environ.get("CI") == "true",
-    })
+    """Returns engine availability status via Gemini API or local Ollama."""
+    provider = os.environ.get("AI_PROVIDER", "gemini").lower()
+    model = os.environ.get("GEMMA_MODEL", "gemma-4-26b-a4b-it")
 
+    if provider == "ollama":
+        ollama_url = os.environ.get("OLLAMA_URL", "http://localhost:11434").rstrip("/")
+        try:
+            r = requests.get(f"{ollama_url}/api/tags", timeout=5)
+            if r.status_code == 200:
+                return jsonify({"live": True, "model": "gemma4:e4b"})
+            return jsonify({"live": False, "reason": "model unreachable"})
+        except Exception:
+            return jsonify({"live": False, "reason": "model unreachable"})
 
-def dynamic_custom_discussion_extractor(corpus: str) -> dict:
-    """Dynamically parses custom text using NLP and regex to extract real decisions, reasons, and verbatim quotes."""
-    lines = [line.strip() for line in corpus.splitlines() if line.strip()]
-    sources = list(set(re.findall(r"#\d+", corpus)))
-    if not sources:
-        sources = ["#discussion-thread", "open-source-consensus"]
+    # Gemini provider
+    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if not api_key:
+        return jsonify({"live": False, "reason": "not configured"})
 
-    decided = None
-    rejected = None
-    why = None
-
-    sentences = re.split(r"(?<=[.!?])\s+", corpus)
-    for s in sentences:
-        s_clean = s.strip()
-        s_lower = s_clean.lower()
-        if any(k in s_lower for k in ["reject", "revert", "veto", "discard", "drop", "slower", "bug", "leak", "fail"]) and not rejected:
-            rejected = s_clean
-        if any(k in s_lower for k in ["decid", "consensus", "agreed", "keep", "accept", "localized", "approved", "chose"]) and not decided:
-            decided = s_clean
-        if any(k in s_lower for k in ["because", "due to", "caused", "created", "overhead", "slower", "regression"]) and not why:
-            why = s_clean
-
-    if not decided:
-        decided = lines[-1] if lines else "Historical maintainer consensus established"
-    if not rejected:
-        rejected = "Alternative proposals or experimental regressions"
-    if not why:
-        why = "Technical overhead, regression risks, and subtle bugs documented in discussion."
-
-    bench_match = re.search(r"(\d+x slower[^\.,;\n]*)", corpus, re.IGNORECASE)
-    if bench_match:
-        verbatim_evidence = bench_match.group(1).strip()
-        why = f"{bench_match.group(1).strip()} compared to baseline."
-    else:
-        words = corpus.split()
-        verbatim_evidence = " ".join(words[2:8]) if len(words) >= 8 else corpus.strip()[:60]
-
-    return {
-        "decided": decided,
-        "rejected": rejected,
-        "why": why,
-        "sources": sources,
-        "verbatim_evidence": verbatim_evidence,
-        "bot_warning": f"Warning: Historical consensus rejected alternative: {rejected[:60]} ({why[:60]}).",
-    }
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}"
+    headers = {"x-goog-api-key": api_key}
+    try:
+        r = requests.get(url, headers=headers, timeout=10)
+        if r.status_code == 200:
+            return jsonify({"live": True, "model": model})
+        return jsonify({"live": False, "reason": "model unreachable"})
+    except Exception:
+        return jsonify({"live": False, "reason": "model unreachable"})
 
 
 @app.route("/api/extract", methods=["POST", "OPTIONS"])
 def api_extract():
-    """Extracts formal MADR Decision Record using gemma4:e4b and diff AST anchor."""
+    """Extracts formal decision record using live Gemma 4 model."""
     if request.method == "OPTIONS":
         return jsonify({"ok": True}), 200
 
+    ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip() or request.remote_addr or "unknown"
+    if is_rate_limited(ip, limit=10, window_seconds=60):
+        return jsonify({"error": "Rate limit reached. Try again in a minute."}), 429
+
     data = request.get_json(silent=True) or {}
-    raw_text = data.get("issue_text") or (
-        "Issue #1832 (142 replies) & Reverted PR #1901: In 2022 benchmark runs, the Rust rewrite was 2x slower on big files compared to the C parser. We reverted #1901 and decided to keep the C parser."
-    )
-    diff_header = data.get("diff_header") or "diff --git a/parser/core.c b/parser/core.c\n@@ -40,80 +40,80 @@ int parse_token_stream(TokenStream* ts)"
-    code_snippet = data.get("code_snippet") or "int parse_token_stream(TokenStream* ts) { /* C implementation */ }"
+    discussion_text = data.get("discussion_text") or data.get("issue_text") or data.get("corpus") or ""
+    if not isinstance(discussion_text, str) or not discussion_text.strip():
+        return jsonify({"error": "Paste a discussion first."}), 400
+    if len(discussion_text) > 12000:
+        return jsonify({"error": "Discussion too long (max 12,000 characters)."}), 413
 
-    bundle = {
-        "scenario_id": data.get("scenario_id", "slide_6_c_parser"),
-        "raw_text": raw_text,
-    }
+    record, err = call_gemma_api(discussion_text)
+    if err:
+        msg, code = err
+        return jsonify({"error": msg}), code
 
-    # Run AST Diff parsing
-    anchor = parse_diff_and_symbol_anchor(diff_header, code_snippet)
+    model = os.environ.get("GEMMA_MODEL", "gemma-4-26b-a4b-it")
+    if os.environ.get("AI_PROVIDER", "gemini").lower() == "ollama":
+        model = "gemma4:e4b"
 
-    # Check local Ollama health
-    model_status = detect_local_gemma_model(DEFAULT_MODEL)
-    if model_status.get("available") and not model_status.get("is_mock"):
-        record = extract_decision_record_with_gemma(bundle, model_name=DEFAULT_MODEL)
-    else:
-        if "1832" in raw_text or "rust" in raw_text.lower():
-            record = extract_decision_record_with_gemma(bundle, model_name=DEFAULT_MODEL)
-        else:
-            record = dynamic_custom_discussion_extractor(raw_text)
-
-    # Contiguous quote traceability verification
-    trace = verify_source_traceability(record, raw_text)
-    record["traceability"] = trace
-    record["traceability_verified"] = trace.get("verified", True)
-    record["word_overlap"] = trace.get("word_overlap", 1.0)
-    record["contiguous_match"] = trace.get("contiguous_match", True)
-    record["anchor"] = {
-        "symbol": anchor.get("function_symbol") or "parse_token_stream",
-        "file": anchor.get("new_file") or "parser/core.c",
-        "line_range": [anchor.get("new_start", 40), anchor.get("new_start", 40) + anchor.get("new_lines", 80)],
-        "hash": anchor.get("code_hash", ""),
-    }
-    return jsonify(record)
+    quote_check = server_quote_check(record.get("quote", ""), discussion_text)
+    return jsonify({
+        "source": "live",
+        "model": model,
+        "record": record,
+        "quote_check": quote_check,
+    }), 200
 
 
 @app.route("/api/evaluate-pep", methods=["POST", "OPTIONS"])
 def api_evaluate_pep():
-    """Genuinely evaluates any raw technical discussion thread (Page 12 scenario)."""
-    if request.method == "OPTIONS":
-        return jsonify({"ok": True}), 200
-
-    data = request.get_json(silent=True) or {}
-    corpus = data.get("corpus") or data.get("text") or (
-        "Discussion Thread on Comprehension Scoping (discuss.python.org):\n"
-        "In Python 2, list comprehension variables leaked into the outer function scope.\n"
-        "Several developers proposed retaining Python 2 variable leaking behavior for backward compatibility.\n"
-        "Core developers rejected retaining variable leakage because leaking comprehension variables creates subtle bugs and shadows outer variables unpredictably.\n"
-        "The consensus decided that comprehension iteration variables have localized inner scope in Python 3.\n"
-        "All alternative proposals to leak loop variables or dynamically bind them were firmly rejected."
-    )
-
-    # Message parsing and signal weighting
-    raw_lines = [l.strip() for l in corpus.splitlines() if l.strip()]
-    messages = []
-    for i, line in enumerate(raw_lines):
-        messages.append({
-            "id": i + 1,
-            "body": line,
-            "author": "contributor",
-            "is_maintainer": any(k in line.lower() for k in ["core", "consensus", "decid", "guido", "maintainer"]),
-        })
-
-    ranked = score_and_rank_discussion(messages, top_k=5)
-
-    bundle = {"scenario_id": "pep_discussion_recovery", "raw_text": corpus}
-    model_status = detect_local_gemma_model(DEFAULT_MODEL)
-    if model_status.get("available") and not model_status.get("is_mock"):
-        record = extract_decision_record_with_gemma(bundle, model_name=DEFAULT_MODEL)
-    else:
-        if "comprehension" in corpus.lower() or "python" in corpus.lower():
-            record = extract_decision_record_with_gemma(bundle, model_name=DEFAULT_MODEL)
-        else:
-            record = dynamic_custom_discussion_extractor(corpus)
-
-    trace = verify_source_traceability(record, corpus)
-    record["traceability"] = trace
-    record["ranked_messages"] = [
-        {"body": m.get("body", ""), "weight": round(m.get("signal_weight", 1.0), 2), "author": m.get("author", "contributor")}
-        for m in ranked
-    ]
-    return jsonify(record)
-
-
-@app.route("/api/relink", methods=["POST", "OPTIONS"])
-def api_relink():
-    """Relinks renamed & edited symbols using 50% AST + 50% SequenceMatcher."""
-    if request.method == "OPTIONS":
-        return jsonify({"ok": True}), 200
-
-    data = request.get_json(silent=True) or {}
-    symbol = data.get("symbol", "parse_token_stream")
-    old_body = data.get("old_body", "int parse_token_stream(TokenStream* ts) { while(next_token(ts, &t)) { process(); } }")
-    candidates = data.get("candidates") or [
-        {
-            "file": "src/lexer/fast_core.c",
-            "function_symbol": "parse_token_stream",
-            "code": "int parse_token_stream(TokenStream* ts) { while(fast_next_token(ts, &t)) { process(); } }",
-            "lines": [45, 125],
-        }
-    ]
-
-    relink_match = relink_symbol_across_repo(symbol, old_body, candidates)
-
-    raw_participants = data.get("participants") or [
-        {"github": "gvanrossum", "email": "guido@python.org"},
-        {"forum_name": "Guido van Rossum", "email": "guido@python.org"},
-        "Guido van Rossum <guido@python.org> (@gvanrossum)",
-    ]
-    resolved_id = resolve_contributor_identities(raw_participants)
-
-    return jsonify({
-        "relink_match": relink_match,
-        "resolved_identities": resolved_id,
-    })
+    """Alias for POST /api/extract."""
+    return api_extract()
 
 
 @app.route("/api/check-pr", methods=["POST", "OPTIONS"])
 def api_check_pr():
-    """Evaluates pull request regression against historical decision memory."""
+    """Evaluates pull request regression against extracted decision memory."""
     if request.method == "OPTIONS":
         return jsonify({"ok": True}), 200
 
     data = request.get_json(silent=True) or {}
-    pr_title = data.get("pr_title") or "Rewrite parse_token_stream in Rust for safety"
+    pr_title = str(data.get("pr_title") or "")
     slider_val = int(data.get("slider_val", 45))
+    rejected_text = str(data.get("rejected", ""))
+    reason_text = str(data.get("reason", ""))
 
-    record = {
-        "decided": "Keep the C parser",
-        "rejected": "Rewrite in Rust",
-        "why": "2x slower on big files compared to the C parser",
-        "bot_warning": "Tried in 2022 and reverted: 2x slower. See #1901.",
-    }
-
-    eval_result = evaluate_pr_regression_with_gemma(pr_title, record)
-    touches_anchor = (slider_val >= 40 and slider_val <= 120)
-    is_regression = touches_anchor and eval_result.get("is_regression", False)
-
-    return jsonify({
-        "touches_anchor": touches_anchor,
-        "is_regression": is_regression,
-        "alert_message": eval_result.get("alert_message") if is_regression else "PR Approved - No Architectural Regression",
-        "confidence": eval_result.get("confidence", 0.95),
-        "anchor": "parser/core.c (lines 40–120) -> parse_token_stream()",
-    })
+    res = check_pr_regression(pr_title, slider_val, rejected_text, reason_text)
+    return jsonify(res), 200
 
 
 # =========================================================================
@@ -304,7 +391,6 @@ def main():
     st.info("Interactive Streamlit dashboard active. Launch http://localhost:8000 for the full web app.")
 
 
-# Backward compatibility alias
 run_streamlit_dashboard = main
 
 if __name__ == "__main__" or (st is not None and hasattr(st, "runtime") and st.runtime.exists()):
