@@ -169,7 +169,7 @@ Antigravity.
 ## What this PR does
 Delivers the mandatory Section 4.5 `examples/` directory:
 - `examples/sample_input.json`:
-  1. Scenario 1 (`slide_6_c_parser`): Issue #1832 (142 replies), Reverted PR #1901 (`parser/core.c` lines 40-120), and 2022 Forum Thread.
+  1. Scenario 1 (`slide_6_c_parser`): Issue #1832 (140 replies), Reverted PR #1901 (`parser/core.c` lines 40-120), and 2022 Forum Thread.
   2. Scenario 2 (`pep_discussion_recovery`): Official Page 12 Evaluation Scenario recovering comprehension scoping rules without the PEP document.
 - `examples/actual_output.json`: Verifiable MADR decision records produced by `gemma4:e4b` via `src/engine.py`.
 - Adds unit test `test_examples_directory_exists_and_valid()` in `tests/test_engine.py`.

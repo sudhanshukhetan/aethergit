@@ -6,7 +6,7 @@
       "issue": {
         "number": 1832,
         "title": "Performance exploration: rewrites and parser optimization",
-        "reply_count": 142,
+        "reply_count": 140,
         "key_comments": [
           {
             "id": 1,
@@ -47,7 +47,7 @@
         "source": "Discourse 2022 Architecture Forum",
         "text": "In the 2022 benchmark suite, the Rust rewrite PR #1901 was 2x slower on big files compared to the C parser. Maintainers reverted the change and affirmed: Keep the C parser."
       },
-      "raw_text": "Issue #1832 (142 replies) & Reverted PR #1901: In 2022 benchmark runs, the Rust rewrite was 2x slower on big files compared to the C parser. We reverted #1901 and decided to keep the C parser."
+      "raw_text": "Issue #1832 (140 replies) & Reverted PR #1901: In 2022 benchmark runs, the Rust rewrite was 2x slower on big files compared to the C parser. We reverted #1901 and decided to keep the C parser."
     },
     {
       "scenario_id": "pep_discussion_recovery",

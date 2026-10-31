@@ -22,7 +22,8 @@ class TestApiEndpoints(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         data = res.get_json()
         self.assertEqual(data.get("status"), "online")
-        self.assertIn("gemma4:e4b", data.get("engine", ""))
+        self.assertEqual(data.get("mode"), "cached-demo")
+        self.assertEqual(data.get("engine"), "cached demo data (no AI on the hosted server)")
 
     def test_post_api_extract(self):
         """POST /api/extract must extract MADR records and symbol anchors."""
