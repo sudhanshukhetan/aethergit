@@ -235,6 +235,41 @@ class TestGemmaOllamaInference(unittest.TestCase):
         self.assertFalse(innocent_eval["is_regression"])
 
 
+class TestExamplesValidation(unittest.TestCase):
+    def test_examples_directory_exists_and_valid(self):
+        """Verifies Section 4.5 mandatory examples/ directory and JSON schema compliance."""
+        import json
+        import os
+
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        sample_path = os.path.join(base_dir, "examples", "sample_input.json")
+        actual_path = os.path.join(base_dir, "examples", "actual_output.json")
+
+        self.assertTrue(os.path.exists(sample_path), "examples/sample_input.json must exist")
+        self.assertTrue(os.path.exists(actual_path), "examples/actual_output.json must exist")
+
+        with open(sample_path, "r", encoding="utf-8") as f:
+            sample_data = json.load(f)
+        with open(actual_path, "r", encoding="utf-8") as f:
+            actual_data = json.load(f)
+
+        self.assertIn("scenarios", sample_data)
+        self.assertGreaterEqual(len(sample_data["scenarios"]), 2)
+        self.assertIn("scenarios_recovered", actual_data)
+
+        # Check Slide 6 benchmark scenario
+        scenario_ids = [s["scenario_id"] for s in sample_data["scenarios"]]
+        self.assertIn("slide_6_c_parser", scenario_ids)
+        self.assertIn("pep_discussion_recovery", scenario_ids)
+
+        # Process first scenario through engine
+        first_scenario = sample_data["scenarios"][0]
+        extracted = extract_decision_record_with_gemma(first_scenario, model_name="gemma4:e4b")
+        self.assertEqual(extracted["decided"], "Keep the C parser")
+        self.assertEqual(extracted["rejected"], "Rewrite in Rust")
+        self.assertEqual(extracted["bot_warning"], "Tried in 2022 and reverted: 2x slower. See #1901.")
+
+
 # Pytest top-level test discovery compatibility
 def test_pytest_diff_anchor_multiline():
     suite = TestSignalFilterAndDiffAnchor()
@@ -267,6 +302,11 @@ def test_pytest_gemma_model_and_inference():
     suite.test_detect_local_gemma_model()
     suite.test_extract_decision_record_deterministic_gate()
     suite.test_evaluate_pr_regression_guard()
+
+
+def test_pytest_examples_directory_valid():
+    suite = TestExamplesValidation()
+    suite.test_examples_directory_exists_and_valid()
 
 
 if __name__ == "__main__":

@@ -1,0 +1,70 @@
+{
+  "scenarios": [
+    {
+      "scenario_id": "slide_6_c_parser",
+      "title": "Slide 6 Benchmark: C Parser vs Rust Rewrite Revert",
+      "issue": {
+        "number": 1832,
+        "title": "Performance exploration: rewrites and parser optimization",
+        "reply_count": 142,
+        "key_comments": [
+          {
+            "id": 1,
+            "author": "new_contributor",
+            "body": "Can we rewrite the C parser in Rust for memory safety?",
+            "is_maintainer": false
+          },
+          {
+            "id": 48,
+            "author": "perf_lead",
+            "body": "Opened PR #1901 to test the Rust rewrite. Running large-file benchmarks now.",
+            "is_maintainer": true
+          },
+          {
+            "id": 140,
+            "author": "bench_bot",
+            "body": "Benchmark completed: Rust rewrite was 2x slower on big files compared to the C parser due to FFI boundary marshaling.",
+            "is_maintainer": false
+          },
+          {
+            "id": 142,
+            "author": "core_maintainer",
+            "body": "Consensus reached: We must keep the C parser. We will revert #1901.",
+            "is_maintainer": true
+          }
+        ]
+      },
+      "pull_request": {
+        "number": 1901,
+        "status": "reverted",
+        "title": "Rewrite token stream parser in Rust",
+        "diff_header": "diff --git a/parser/core.c b/parser/core.c\n@@ -40,80 +40,80 @@ int parse_token_stream(TokenStream* stream)",
+        "file": "parser/core.c",
+        "line_range": [40, 120],
+        "function_symbol": "parse_token_stream"
+      },
+      "forum_thread": {
+        "source": "Discourse 2022 Architecture Forum",
+        "text": "In the 2022 benchmark suite, the Rust rewrite PR #1901 was 2x slower on big files compared to the C parser. Maintainers reverted the change and affirmed: Keep the C parser."
+      },
+      "raw_text": "Issue #1832 (142 replies) & Reverted PR #1901: In 2022 benchmark runs, the Rust rewrite was 2x slower on big files compared to the C parser. We reverted #1901 and decided to keep the C parser."
+    },
+    {
+      "scenario_id": "pep_discussion_recovery",
+      "title": "Page 12 Evaluation Scenario: Python PEP Comprehension Scoping Discussion",
+      "source_platform": "discuss.python.org",
+      "raw_text": "Discussion Thread on Comprehension Scoping: In Python 2, list comprehension variables leaked into the outer function scope. Several proposals suggested keeping the Python 2 variable leaking behavior for backward compatibility. Core developers rejected retaining variable leakage because leaking comprehension variables creates subtle bugs and shadows outer variables unpredictably. The consensus decided that comprehension iteration variables have localized inner scope in Python 3. All alternative proposals to leak loop variables or dynamically bind them were firmly rejected.",
+      "participants": [
+        {"name": "Guido van Rossum", "github": "gvanrossum", "email": "guido@python.org"},
+        {"forum_name": "Guido van Rossum", "email": "guido@python.org"},
+        {"name": "Core Dev", "github": "coredev", "email": "dev@python.org"}
+      ],
+      "code_anchor": {
+        "diff_header": "diff --git a/compiler/symtable.py b/compiler/symtable.py\n@@ -85,30 +85,30 @@ def compile_comprehension_scope(node, context)",
+        "file": "compiler/symtable.py",
+        "line_range": [85, 115],
+        "function_symbol": "compile_comprehension_scope"
+      }
+    }
+  ]
+}
