@@ -1,45 +1,28 @@
-"""Vercel Serverless Entrypoint for AetherGit.
-
-Standard Library only: exports 'handler' (BaseHTTPRequestHandler) and 'app' (WSGI callable).
-"""
+"""Vercel Serverless Entrypoint for AetherGit."""
 
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 
-INDEX_PATH = Path(__file__).resolve().parent.parent / "index.html"
-
-
-class handler(BaseHTTPRequestHandler):
-    """Vercel native BaseHTTPRequestHandler entrypoint."""
-
-    def do_GET(self):
-        if INDEX_PATH.exists():
-            content = INDEX_PATH.read_bytes()
-        else:
-            content = b"<!DOCTYPE html><html><body><h1>AetherGit</h1></body></html>"
-
-        self.send_response(200)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.send_header("Content-Length", str(len(content)))
-        self.end_headers()
-        self.wfile.write(content)
+HTML_FILE = Path(__file__).resolve().parent.parent / "index.html"
 
 
 def app(environ, start_response):
-    """Standard WSGI entrypoint callable."""
-    if INDEX_PATH.exists():
-        content = INDEX_PATH.read_bytes()
-    else:
-        content = b"<!DOCTYPE html><html><body><h1>AetherGit</h1></body></html>"
-
-    status = "200 OK"
-    response_headers = [
+    data = HTML_FILE.read_bytes() if HTML_FILE.exists() else b"AetherGit Decision Intelligence Online"
+    start_response("200 OK", [
         ("Content-Type", "text/html; charset=utf-8"),
-        ("Content-Length", str(len(content))),
-    ]
-    start_response(status, response_headers)
-    return [content]
+        ("Content-Length", str(len(data)))
+    ])
+    return [data]
 
 
-# Additional common aliases for platform flexibility
 application = app
+
+
+class handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        data = HTML_FILE.read_bytes() if HTML_FILE.exists() else b"AetherGit Decision Intelligence Online"
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)

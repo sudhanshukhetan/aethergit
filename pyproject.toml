@@ -2,11 +2,10 @@
 name = "aethergit"
 version = "0.1.0"
 description = "Open Source Decision Intelligence and Knowledge Recovery"
-readme = "README.md"
 requires-python = ">=3.10"
 
 [tool.vercel]
-entrypoint = "api/index.py"
+entrypoint = "wsgi:app"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
