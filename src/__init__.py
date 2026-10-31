@@ -1,0 +1,1 @@
+"""AetherGit package initialization."""
