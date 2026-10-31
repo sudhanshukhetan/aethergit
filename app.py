@@ -3,48 +3,45 @@
 Problem 06: Open Source Decision Intelligence and Knowledge Recovery
 Hacktoberfest 2026 - Hack Day Sonipat
 Model: gemma4:e4b (via local Ollama)
-
-Provides:
-- Web/Serverless Entrypoint ("app", "application", "handler") for Vercel, Render, AWS, and Gunicorn
-- Interactive Streamlit Dashboard when launched via 'streamlit run app.py'
 """
 
 import json
 import os
 import sys
-from http.server import BaseHTTPRequestHandler
 from pathlib import Path
-from typing import Any, Dict
+
+HTML_PATH = Path(__file__).resolve().parent / "index.html"
+
+# Top-level Flask application entrypoint for Vercel Serverless
+try:
+    from flask import Flask, Response
+
+    app = Flask(__name__)
+
+    @app.route("/")
+    def index():
+        if HTML_PATH.exists():
+            return Response(HTML_PATH.read_text(encoding="utf-8"), mimetype="text/html")
+        return Response("AetherGit Decision Intelligence Online", mimetype="text/plain")
+
+    application = app
+except ImportError:
+    # Standard WSGI fallback if flask is not yet installed in local environment
+    def app(environ, start_response):
+        data = HTML_PATH.read_bytes() if HTML_PATH.exists() else b"AetherGit Decision Intelligence Online"
+        start_response("200 OK", [
+            ("Content-Type", "text/html; charset=utf-8"),
+            ("Content-Length", str(len(data))),
+        ])
+        return [data]
+
+    application = app
 
 # Safely import streamlit with fallback so lightweight serverless runtimes never crash
 try:
     import streamlit as st
 except ImportError:
     st = None
-
-HTML_FILE = Path(__file__).resolve().parent / "index.html"
-
-
-def app(environ, start_response):
-    data = HTML_FILE.read_bytes() if HTML_FILE.exists() else b"AetherGit Decision Intelligence Online"
-    start_response("200 OK", [
-        ("Content-Type", "text/html; charset=utf-8"),
-        ("Content-Length", str(len(data)))
-    ])
-    return [data]
-
-
-application = app
-
-
-class handler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        data = HTML_FILE.read_bytes() if HTML_FILE.exists() else b"AetherGit Decision Intelligence Online"
-        self.send_response(200)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.send_header("Content-Length", str(len(data)))
-        self.end_headers()
-        self.wfile.write(data)
 
 
 def main():
