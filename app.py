@@ -13,97 +13,45 @@ import json
 import os
 import sys
 from http.server import BaseHTTPRequestHandler
+from pathlib import Path
 from typing import Any, Dict
 
+# Safely import streamlit with fallback so lightweight serverless runtimes never crash
+try:
+    import streamlit as st
+except ImportError:
+    st = None
 
-# =========================================================================
-# WSGI / ASGI / SERVERLESS ENTRYPOINTS
-# Fixes [PYTHON_ENTRYPOINT_NOT_FOUND] by exporting "app", "application", "handler"
-# =========================================================================
-def wsgi_application(environ, start_response):
-    """WSGI standard entrypoint serving the standalone AetherGit application."""
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    html_file = os.path.join(base_dir, "index.html")
+HTML_FILE = Path(__file__).resolve().parent / "index.html"
 
-    if os.path.exists(html_file):
-        with open(html_file, "rb") as f:
-            body = f.read()
-        headers = [
-            ("Content-Type", "text/html; charset=utf-8"),
-            ("Content-Length", str(len(body))),
-            ("Cache-Control", "no-cache"),
-        ]
-        start_response("200 OK", headers)
-        return [body]
 
-    fallback = b"AetherGit is running. Open index.html or launch via 'streamlit run app.py'."
+def app(environ, start_response):
+    data = HTML_FILE.read_bytes() if HTML_FILE.exists() else b"AetherGit Decision Intelligence Online"
     start_response("200 OK", [
-        ("Content-Type", "text/plain; charset=utf-8"),
-        ("Content-Length", str(len(fallback))),
+        ("Content-Type", "text/html; charset=utf-8"),
+        ("Content-Length", str(len(data)))
     ])
-    return [fallback]
+    return [data]
 
 
-async def asgi_app(scope, receive, send):
-    """ASGI entrypoint for modern async runners."""
-    if scope.get("type") == "http":
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        html_file = os.path.join(base_dir, "index.html")
-        if os.path.exists(html_file):
-            with open(html_file, "rb") as f:
-                body = f.read()
-        else:
-            body = b"AetherGit is running."
-        await send({
-            "type": "http.response.start",
-            "status": 200,
-            "headers": [
-                [b"content-type", b"text/html; charset=utf-8"],
-                [b"content-length", str(len(body)).encode("ascii")],
-            ],
-        })
-        await send({
-            "type": "http.response.body",
-            "body": body,
-        })
+application = app
 
 
-class UniversalHandler(BaseHTTPRequestHandler):
-    """Universal handler supporting WSGI (environ, start_response), ASGI (scope, receive, send), and BaseHTTPRequestHandler."""
-
-    def __init__(self, *args, **kwargs):
-        if args or kwargs:
-            try:
-                super().__init__(*args, **kwargs)
-            except Exception:
-                pass
-
-    def __call__(self, *args, **kwargs):
-        if len(args) == 3:
-            return asgi_app(args[0], args[1], args[2])
-        return wsgi_application(args[0], args[1])
-
+class handler(BaseHTTPRequestHandler):
     def do_GET(self):
+        data = HTML_FILE.read_bytes() if HTML_FILE.exists() else b"AetherGit Decision Intelligence Online"
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(data)))
         self.end_headers()
-        html_path = os.path.join(os.path.dirname(__file__), "index.html")
-        if os.path.exists(html_path):
-            with open(html_path, "rb") as f:
-                self.wfile.write(f.read())
-        else:
-            self.wfile.write(b"<h1>AetherGit Dashboard</h1>")
+        self.wfile.write(data)
 
 
-# Top-level exports required by deployment platforms (Vercel, Render, AWS Lambda, WSGI/ASGI)
-app = UniversalHandler()
-application = app
-handler = UniversalHandler
-
-
-def run_streamlit_dashboard():
+def main():
     """Interactive Streamlit application runner."""
-    import streamlit as st
+    if st is None:
+        return
+
     from src.engine import (
         DEFAULT_MODEL,
         detect_local_gemma_model,
@@ -417,14 +365,9 @@ def run_streamlit_dashboard():
     st.caption("AetherGit · Problem 06 Open Source Decision Intelligence · Hacktoberfest 2026 Hack Day Sonipat")
 
 
-# Automatically run Streamlit dashboard when executed inside Streamlit runtime
-_is_in_streamlit = False
-try:
-    import streamlit as st
-    if hasattr(st, "runtime") and st.runtime.exists():
-        _is_in_streamlit = True
-except Exception:
-    _is_in_streamlit = False
+# Backward compatibility alias
+run_streamlit_dashboard = main
 
-if _is_in_streamlit or (not os.environ.get("VERCEL") and __name__ == "__main__"):
-    run_streamlit_dashboard()
+if __name__ == "__main__" or (st is not None and hasattr(st, "runtime") and st.runtime.exists()):
+    if not os.environ.get("VERCEL"):
+        main()
