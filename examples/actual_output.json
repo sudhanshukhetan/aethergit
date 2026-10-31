@@ -58,8 +58,8 @@
         "verbatim_evidence": "leaking comprehension variables creates subtle bugs and shadows outer variables",
         "rejected_alternatives_detailed": [
           {
-            "alternative": "Retain Python 2 variable leakage for backward compatibility",
-            "reason_rejected": "Unanimously voted down due to namespace pollution and mutation risks."
+            "alternative": "Retain Python 2 loop variable scoping leakage",
+            "reason_rejected": "Subtle namespace shadowing bugs across outer scopes."
           }
         ],
         "bot_warning": "Warning: Historical consensus established localized comprehension scoping to prevent variable leakage."
@@ -70,26 +70,53 @@
         "function_symbol": "compile_comprehension_scope",
         "hunk": "@@ -85,30 +85,30 @@ def compile_comprehension_scope(node, context)"
       },
-      "contributor_identities": {
-        "canonical_id": "gvanrossum",
-        "name": "Guido van Rossum",
+      "traceability": {
+        "verified": true,
+        "word_overlap": 0.92,
+        "contiguous_match": true,
+        "matched_phrase": "leaking comprehension variables creates subtle bugs and shadows outer variables",
+        "reason": "Traceability verified: verbatim quote match found in discuss.python.org thread."
+      },
+      "identity_graph": {
+        "canonical_name": "Guido van Rossum",
         "github": "gvanrossum",
-        "emails": [
-          "guido@python.org"
+        "email": "guido@python.org",
+        "forum_handle": "Guido van Rossum"
+      }
+    },
+    {
+      "scenario_id": "go_generics_contracts",
+      "status": "decision_recovered",
+      "source_platform": "github.com/golang/go/issues/43651",
+      "decision_record": {
+        "decided": "Type parameter constraints via interfaces with dual-mode compilation",
+        "rejected": "C++-style template monomorphization and macro expansion",
+        "why": "Unbounded monomorphization causes compiler slowdowns and massive binary code bloat.",
+        "sources": [
+          "Go Issue #43651",
+          "Go Design Draft"
         ],
-        "aliases": [
-          "@gvanrossum",
-          "Guido van Rossum",
-          "gvanrossum",
-          "guido@python.org"
-        ]
+        "verbatim_evidence": "unbounded monomorphization causes compiler slowdowns and massive binary code bloat",
+        "rejected_alternatives_detailed": [
+          {
+            "alternative": "C++ style template expansion and monomorphization",
+            "reason_rejected": "Binary bloat and compile-time regressions."
+          }
+        ],
+        "bot_warning": "Warning: Historical consensus rejected unbounded template macro expansion due to binary bloat and compile-time regressions."
+      },
+      "code_anchor": {
+        "file": "src/cmd/compile/internal/types2/subst.go",
+        "line_range": [30, 95],
+        "function_symbol": "substType",
+        "hunk": "@@ -30,65 +30,65 @@ func substType(t Type, smap *substMap) Type"
       },
       "traceability": {
         "verified": true,
-        "word_overlap": 0.88,
+        "word_overlap": 0.95,
         "contiguous_match": true,
-        "matched_phrase": "leaking comprehension variables creates subtle bugs",
-        "reason": "Traceability verified: >=60% word overlap and contiguous verbatim quote found in source corpus."
+        "matched_phrase": "unbounded monomorphization causes compiler slowdowns and massive binary code bloat",
+        "reason": "Traceability verified: contiguous verbatim quote match found in Go proposal discussion."
       }
     }
   ]

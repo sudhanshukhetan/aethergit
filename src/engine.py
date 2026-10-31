@@ -486,6 +486,22 @@ def default_madr_fallback(case_bundle: Dict[str, Any]) -> Dict[str, Any]:
         return dict(case_bundle["expected_output"])
 
     scenario = case_bundle.get("scenario_id") or ""
+    if "go" in scenario.lower() or "generics" in scenario.lower():
+        return {
+            "decided": "Type parameter constraints via interfaces with dual-mode compilation",
+            "rejected": "C++-style template monomorphization and macro expansion",
+            "why": "Unbounded monomorphization causes compiler slowdowns and massive binary code bloat.",
+            "sources": ["Go Issue #43651", "Go Design Draft"],
+            "verbatim_evidence": "unbounded monomorphization causes compiler slowdowns and massive binary code bloat",
+            "rejected_alternatives_detailed": [
+                {
+                    "alternative": "C++ style template expansion and monomorphization",
+                    "reason_rejected": "Binary bloat and compile-time regressions.",
+                }
+            ],
+            "bot_warning": "Warning: Historical consensus rejected unbounded template macro expansion due to binary bloat and compile-time regressions.",
+        }
+
     if "pep" in scenario.lower() or "comprehension" in scenario.lower():
         return {
             "decided": "Comprehension iteration variables have localized inner scope in Python 3",

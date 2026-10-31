@@ -65,6 +65,23 @@
         "line_range": [85, 115],
         "function_symbol": "compile_comprehension_scope"
       }
+    },
+    {
+      "scenario_id": "go_generics_contracts",
+      "title": "Go Generics Design Benchmark: Type Parameters vs Template Monomorphization",
+      "source_platform": "github.com/golang/go/issues/43651",
+      "raw_text": "Go Issue #43651 & Design Discussion: Earlier proposals suggested C++-style template monomorphization and macro expansion for Go generics. Core maintainers rejected template macro expansion because unbounded monomorphization causes compiler slowdowns and massive binary code bloat. The language team decided on type parameter constraints via interfaces with dual-mode compilation. All proposals for macro-style template expansion without interface constraints were rejected.",
+      "issue": {
+        "number": 43651,
+        "title": "Type Parameters Proposal for Go",
+        "reply_count": 89
+      },
+      "code_anchor": {
+        "diff_header": "diff --git a/src/cmd/compile/internal/types2/subst.go b/src/cmd/compile/internal/types2/subst.go\n@@ -30,65 +30,65 @@ func substType(t Type, smap *substMap) Type",
+        "file": "src/cmd/compile/internal/types2/subst.go",
+        "line_range": [30, 95],
+        "function_symbol": "substType"
+      }
     }
   ]
 }

@@ -269,6 +269,17 @@ class TestExamplesValidation(unittest.TestCase):
         self.assertEqual(extracted["rejected"], "Rewrite in Rust")
         self.assertEqual(extracted["bot_warning"], "Tried in 2022 and reverted: 2x slower. See #1901.")
 
+    def test_go_generics_scenario_validation(self):
+        """Verifies Go generics benchmark scenario extraction and schema compliance."""
+        go_bundle = {
+            "scenario_id": "go_generics_contracts",
+            "raw_text": "Go Issue #43651 & Design Discussion: Earlier proposals suggested C++-style template monomorphization and macro expansion for Go generics. Core maintainers rejected template macro expansion because unbounded monomorphization causes compiler slowdowns and massive binary code bloat. The language team decided on type parameter constraints via interfaces with dual-mode compilation. All proposals for macro-style template expansion without interface constraints were rejected.",
+        }
+        res = extract_decision_record_with_gemma(go_bundle, model_name="gemma4:e4b")
+        self.assertIn("Type parameter", res["decided"])
+        self.assertIn("template", res["rejected"].lower())
+        self.assertTrue(res.get("traceability", {}).get("contiguous_match"))
+
 
 class TestCliHelpers(unittest.TestCase):
     def test_cli_format_madr_markdown(self):
