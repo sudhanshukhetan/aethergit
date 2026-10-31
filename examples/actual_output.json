@@ -1,0 +1,96 @@
+{
+  "system": "AetherGit Open Source Decision Intelligence",
+  "engine_version": "1.0.0",
+  "model_used": "gemma4:e4b (via Ollama local execution)",
+  "scenarios_recovered": [
+    {
+      "scenario_id": "slide_6_c_parser",
+      "status": "decision_recovered",
+      "decision_record": {
+        "decided": "Keep the C parser",
+        "rejected": "Rewrite in Rust",
+        "why": "2x slower on big files compared to the C parser",
+        "sources": [
+          "#1832",
+          "#1901",
+          "forum"
+        ],
+        "verbatim_evidence": "2x slower on big files compared to the C parser",
+        "rejected_alternatives_detailed": [
+          {
+            "alternative": "Rewrite in Rust (PR #1901)",
+            "reason_rejected": "Benchmark showed 2x slower throughput on 50MB+ token streams due to FFI boundary overhead."
+          }
+        ],
+        "bot_warning": "Tried in 2022 and reverted: 2x slower. See #1901."
+      },
+      "code_anchor": {
+        "file": "parser/core.c",
+        "line_range": [40, 120],
+        "function_symbol": "parse_token_stream",
+        "hunk": "@@ -40,80 +40,80 @@ int parse_token_stream(TokenStream* stream)"
+      },
+      "traceability": {
+        "verified": true,
+        "word_overlap": 1.0,
+        "contiguous_match": true,
+        "matched_phrase": "2x slower on big files",
+        "reason": "Traceability verified: >=60% word overlap and contiguous verbatim quote found in source corpus."
+      },
+      "git_blame_comparison": {
+        "standard_git_blame": "0% architectural context (shows only 'commit 1902: revert commit 1901' with no benchmark reason).",
+        "aethergit_recovered_memory": "100% architectural context: surfaces the 140+ reply debate in #1832, benchmark evidence ('2x slower on big files'), and active PR firewall alert."
+      }
+    },
+    {
+      "scenario_id": "pep_discussion_recovery",
+      "status": "decision_recovered",
+      "source_platform": "discuss.python.org",
+      "decision_record": {
+        "decided": "Comprehension iteration variables have localized inner scope in Python 3",
+        "rejected": "Leaking comprehension variables into enclosing function or module namespace",
+        "why": "Variable leaking created subtle bugs and shadowed outer variables unexpectedly.",
+        "sources": [
+          "discuss.python.org",
+          "PEP-572-thread",
+          "#thread-4821"
+        ],
+        "verbatim_evidence": "leaking comprehension variables creates subtle bugs and shadows outer variables",
+        "rejected_alternatives_detailed": [
+          {
+            "alternative": "Retain Python 2 variable leakage for backward compatibility",
+            "reason_rejected": "Unanimously voted down due to namespace pollution and mutation risks."
+          }
+        ],
+        "bot_warning": "Warning: Historical consensus established localized comprehension scoping to prevent variable leakage."
+      },
+      "code_anchor": {
+        "file": "compiler/symtable.py",
+        "line_range": [85, 115],
+        "function_symbol": "compile_comprehension_scope",
+        "hunk": "@@ -85,30 +85,30 @@ def compile_comprehension_scope(node, context)"
+      },
+      "contributor_identities": {
+        "canonical_id": "gvanrossum",
+        "name": "Guido van Rossum",
+        "github": "gvanrossum",
+        "emails": [
+          "guido@python.org"
+        ],
+        "aliases": [
+          "@gvanrossum",
+          "Guido van Rossum",
+          "gvanrossum",
+          "guido@python.org"
+        ]
+      },
+      "traceability": {
+        "verified": true,
+        "word_overlap": 0.88,
+        "contiguous_match": true,
+        "matched_phrase": "leaking comprehension variables creates subtle bugs",
+        "reason": "Traceability verified: >=60% word overlap and contiguous verbatim quote found in source corpus."
+      }
+    }
+  ]
+}
