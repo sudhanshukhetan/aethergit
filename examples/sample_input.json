@@ -23,7 +23,7 @@
           {
             "id": 140,
             "author": "bench_bot",
-            "body": "Benchmark completed: Rust rewrite was 2x slower on big files compared to the C parser due to FFI boundary marshaling.",
+            "body": "Benchmark completed: Rust rewrite was 2x slower on big files compared to the C parser.",
             "is_maintainer": false
           },
           {

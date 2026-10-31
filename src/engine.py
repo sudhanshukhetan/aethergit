@@ -507,7 +507,7 @@ def default_madr_fallback(case_bundle: Dict[str, Any]) -> Dict[str, Any]:
             "decided": "Comprehension iteration variables have localized inner scope in Python 3",
             "rejected": "Leaking comprehension variables into enclosing function or module namespace",
             "why": "Variable leaking created subtle bugs and shadowed outer variables unexpectedly.",
-            "sources": ["discuss.python.org", "PEP-572-thread", "#thread-4821"],
+            "sources": ["discuss.python.org"],
             "verbatim_evidence": "leaking variables creates subtle bugs and shadows outer variables",
             "rejected_alternatives_detailed": [
                 {
@@ -528,7 +528,7 @@ def default_madr_fallback(case_bundle: Dict[str, Any]) -> Dict[str, Any]:
         "rejected_alternatives_detailed": [
             {
                 "alternative": "Rewrite in Rust (PR #1901)",
-                "reason_rejected": "Benchmark showed 2x slower throughput on 50MB+ token streams due to FFI boundary overhead.",
+                "reason_rejected": "Benchmark showed 2x slower throughput on big files compared to the C parser.",
             }
         ],
         "bot_warning": "Tried in 2022 and reverted: 2x slower. See #1901.",
