@@ -5,6 +5,9 @@ from src.engine import (
     score_and_rank_discussion,
     parse_diff_and_symbol_anchor,
     compute_code_fingerprint,
+    relink_symbol_across_repo,
+    resolve_contributor_identities,
+    verify_source_traceability,
 )
 
 
@@ -89,6 +92,101 @@ rename to compiler/ast_scope.py
         self.assertEqual(res["function_symbol"], "compile_comprehension_scope")
 
 
+class TestRenameRelinkerAndIdentity(unittest.TestCase):
+    def test_relink_symbol_across_rename_and_edits(self):
+        """Tests that a function in parser/core.c moved to src/lexer/fast_core.c and edited relinks >= 0.60."""
+        sig = "parse_token_stream"
+        old_body = """
+        int parse_token_stream(TokenStream* ts) {
+            Token t;
+            while (next_token(ts, &t)) {
+                process_token(&t);
+            }
+            return 0;
+        }
+        """
+        # Refactored candidate with slight edits in body
+        candidates = [
+            {
+                "file": "src/lexer/fast_core.c",
+                "function_symbol": "parse_token_stream",
+                "code": """
+                int parse_token_stream(TokenStream* ts) {
+                    Token t;
+                    // optimized buffer iteration
+                    while (fast_next_token(ts, &t)) {
+                        process_token_fast(&t);
+                    }
+                    return 0;
+                }
+                """,
+                "lines": (45, 125),
+            },
+            {
+                "file": "src/utils/unrelated.c",
+                "function_symbol": "unrelated_util",
+                "code": "void unrelated_util() {}",
+                "lines": (1, 10),
+            },
+        ]
+        match = relink_symbol_across_repo(sig, old_body, candidates, threshold=0.60)
+        self.assertIsNotNone(match)
+        self.assertEqual(match["file"], "src/lexer/fast_core.c")
+        self.assertEqual(match["function_symbol"], "parse_token_stream")
+        self.assertGreaterEqual(match["confidence"], 0.70)
+        self.assertTrue(match["relinked"])
+
+    def test_resolve_contributor_identities(self):
+        """Tests unifying GitHub handle, Git email, and discuss forum name into single canonical profile."""
+        participants = [
+            {"github": "gvanrossum", "email": "guido@python.org"},
+            {"forum_name": "Guido van Rossum", "email": "guido@python.org"},
+            "Guido van Rossum <guido@python.org> (@gvanrossum)",
+            {"github": "kushagar", "email": "kushagar@example.com", "name": "Kushagar"},
+        ]
+        res = resolve_contributor_identities(participants)
+        canonical = res["canonical_profiles"]
+        lookup = res["lookup_map"]
+
+        self.assertIn("gvanrossum", canonical)
+        prof = canonical["gvanrossum"]
+        self.assertEqual(prof["github"], "gvanrossum")
+        self.assertIn("guido@python.org", prof["emails"])
+        self.assertIn("guido van rossum", lookup)
+        self.assertIn("guido@python.org", lookup)
+        self.assertIn("@gvanrossum", lookup)
+
+    def test_verify_source_traceability_success(self):
+        """Tests contiguous phrase matching and word overlap for genuine evidence."""
+        raw_corpus = """
+        Issue #1832: Benchmark results are in.
+        The Rust rewrite branch was 2x slower on big files compared to the C parser.
+        We must revert #1901 and keep the C parser for production stability.
+        """
+        record = {
+            "decided": "Keep the C parser",
+            "rejected": "Rewrite in Rust",
+            "why": "2x slower on big files compared to the C parser",
+            "verbatim_evidence": "2x slower on big files compared to the C parser",
+        }
+        res = verify_source_traceability(record, raw_corpus)
+        self.assertTrue(res["verified"])
+        self.assertTrue(res["contiguous_match"])
+        self.assertGreaterEqual(res["word_overlap"], 0.80)
+
+    def test_verify_source_traceability_rejects_hallucination(self):
+        """Tests that hallucinated quotes are rejected by contiguous validator."""
+        raw_corpus = "The C parser is currently used in our engine."
+        hallucinated_record = {
+            "decided": "Keep C parser",
+            "why": "Rust causes too many memory leaks and concurrency locks",
+            "verbatim_evidence": "Rust causes too many memory leaks and concurrency locks",
+        }
+        res = verify_source_traceability(hallucinated_record, raw_corpus)
+        self.assertFalse(res["verified"])
+        self.assertFalse(res["contiguous_match"])
+
+
 # Pytest top-level test discovery compatibility
 def test_pytest_diff_anchor_multiline():
     suite = TestSignalFilterAndDiffAnchor()
@@ -98,6 +196,22 @@ def test_pytest_diff_anchor_multiline():
 def test_pytest_diff_anchor_singleline():
     suite = TestSignalFilterAndDiffAnchor()
     suite.test_parse_diff_single_line_hunk_and_python_symbol()
+
+
+def test_pytest_relink_symbol():
+    suite = TestRenameRelinkerAndIdentity()
+    suite.test_relink_symbol_across_rename_and_edits()
+
+
+def test_pytest_resolve_identities():
+    suite = TestRenameRelinkerAndIdentity()
+    suite.test_resolve_contributor_identities()
+
+
+def test_pytest_verify_traceability():
+    suite = TestRenameRelinkerAndIdentity()
+    suite.test_verify_source_traceability_success()
+    suite.test_verify_source_traceability_rejects_hallucination()
 
 
 if __name__ == "__main__":

@@ -9,9 +9,10 @@ Architecture:
 - Local Gemma (gemma4:e4b via Ollama) Inference
 """
 
+import difflib
 import hashlib
 import re
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 # Key decision/rejection vocabulary recognized by maintainers
 DECISION_KEYWORDS = [
@@ -204,3 +205,226 @@ def parse_diff_and_symbol_anchor(
     res["function_symbol"] = extract_function_symbol(header_tail, code_snippet)
 
     return res
+
+
+def relink_symbol_across_repo(
+    sig: str,
+    old_body: str,
+    candidates: List[Dict[str, Any]],
+    threshold: float = 0.60,
+) -> Optional[Dict[str, Any]]:
+    """Relinks an architectural decision to code when files are renamed AND edited.
+
+    Solves Problem 06 Consideration #3:
+    - Combines 50% function signature match + 50% normalized SequenceMatcher ratio
+    - Threshold >= 0.60 allows link survival through refactoring and renaming
+    """
+    if not candidates:
+        return None
+
+    normalized_old = normalize_code_snippet(old_body)
+    best_candidate: Optional[Dict[str, Any]] = None
+    best_score = 0.0
+
+    for cand in candidates:
+        cand_symbol = cand.get("function_symbol") or ""
+        cand_body = cand.get("code") or ""
+        normalized_cand = normalize_code_snippet(cand_body)
+
+        # 1. Signature similarity (0.0 to 1.0)
+        sig_score = 0.0
+        if sig and cand_symbol:
+            if sig.lower() == cand_symbol.lower():
+                sig_score = 1.0
+            elif sig.lower() in cand_symbol.lower() or cand_symbol.lower() in sig.lower():
+                sig_score = 0.75
+
+        # 2. Body similarity using difflib SequenceMatcher (0.0 to 1.0)
+        if normalized_old and normalized_cand:
+            matcher = difflib.SequenceMatcher(None, normalized_old, normalized_cand)
+            body_ratio = matcher.ratio()
+        else:
+            body_ratio = 1.0 if not normalized_old and not normalized_cand else 0.0
+
+        # Hybrid confidence score: 50% signature + 50% body
+        confidence = (0.5 * sig_score) + (0.5 * body_ratio)
+
+        if confidence > best_score:
+            best_score = confidence
+            best_candidate = {
+                "file": cand.get("file"),
+                "function_symbol": cand_symbol,
+                "lines": cand.get("lines", (1, 1)),
+                "confidence": round(confidence, 4),
+                "sig_score": round(sig_score, 4),
+                "body_ratio": round(body_ratio, 4),
+                "relinked": True,
+            }
+
+    if best_candidate and best_score >= threshold:
+        return best_candidate
+
+    return None
+
+
+def resolve_contributor_identities(
+    participants: List[Union[Dict[str, Any], str]],
+) -> Dict[str, Any]:
+    """Unifies contributor identities across GitHub handles, Git commit emails, and discuss.python.org.
+
+    Solves Problem 06 Consideration #4:
+    - Unifies @gvanrossum, guido@python.org, and Guido van Rossum into a canonical maintainer profile.
+    - Handles handles, emails, and forum display names.
+    """
+    profiles: List[Dict[str, Any]] = []
+
+    def normalize_token(s: str) -> str:
+        return re.sub(r"[^a-zA-Z0-9]", "", s).lower()
+
+    for p in participants:
+        if isinstance(p, str):
+            # Parse string e.g. "Guido van Rossum <guido@python.org> (@gvanrossum)"
+            emails = re.findall(r"[\w\.-]+@[\w\.-]+", p)
+            handles = re.findall(r"@([a-zA-Z0-9_-]+)", p)
+            clean_name = re.sub(r"<[^>]+>|@[a-zA-Z0-9_-]+", "", p).strip()
+            item = {
+                "name": clean_name or (handles[0] if handles else (emails[0] if emails else p)),
+                "github": handles[0] if handles else None,
+                "email": emails[0] if emails else None,
+                "forum_name": clean_name or None,
+            }
+        else:
+            item = dict(p)
+
+        name = item.get("name") or item.get("forum_name") or ""
+        github = (item.get("github") or "").lstrip("@")
+        email = item.get("email") or ""
+        forum_name = item.get("forum_name") or name
+
+        # Collect keys to cluster
+        keys = set()
+        if github:
+            keys.add(normalize_token(github))
+        if email:
+            keys.add(normalize_token(email.split("@")[0]))
+            keys.add(email.lower())
+        if name:
+            keys.add(normalize_token(name))
+
+        # Check if matches existing profile
+        matched_profile = None
+        for prof in profiles:
+            if keys.intersection(prof["_cluster_keys"]):
+                matched_profile = prof
+                break
+
+        if matched_profile is None:
+            canonical_handle = github or (email.split("@")[0] if email else normalize_token(name))
+            matched_profile = {
+                "canonical_id": canonical_handle,
+                "name": name or github or email,
+                "github": github,
+                "emails": [email] if email else [],
+                "forum_names": [forum_name] if forum_name else [],
+                "aliases": set(),
+                "_cluster_keys": set(keys),
+            }
+            profiles.append(matched_profile)
+        else:
+            # Merge
+            if github and not matched_profile["github"]:
+                matched_profile["github"] = github
+            if email and email not in matched_profile["emails"]:
+                matched_profile["emails"].append(email)
+            if forum_name and forum_name not in matched_profile["forum_names"]:
+                matched_profile["forum_names"].append(forum_name)
+            if name and not matched_profile["name"]:
+                matched_profile["name"] = name
+            matched_profile["_cluster_keys"].update(keys)
+
+        if github:
+            matched_profile["aliases"].add(f"@{github}")
+            matched_profile["aliases"].add(github)
+        if email:
+            matched_profile["aliases"].add(email)
+        if forum_name:
+            matched_profile["aliases"].add(forum_name)
+
+    # Clean internal keys and convert aliases to sorted list
+    result: Dict[str, Any] = {"canonical_profiles": {}, "lookup_map": {}}
+    for prof in profiles:
+        prof.pop("_cluster_keys", None)
+        prof["aliases"] = sorted(list(prof["aliases"]))
+        cid = prof["canonical_id"]
+        result["canonical_profiles"][cid] = prof
+        for alias in prof["aliases"]:
+            result["lookup_map"][alias.lower()] = cid
+
+    return result
+
+
+def verify_source_traceability(
+    decision_record: Dict[str, Any],
+    raw_corpus: str,
+) -> Dict[str, Any]:
+    """Verifies that extracted decisions and verbatim evidence genuinely exist in original discussions.
+
+    Solves Problem 06 Consideration #5:
+    - Verifies >=60% content-word overlap
+    - Verifies a contiguous phrase match (>=4 consecutive words) from verbatim_evidence inside raw_corpus
+    - Rejects hallucinated AI summaries
+    """
+    evidence = decision_record.get("verbatim_evidence") or decision_record.get("quote") or ""
+    why_text = decision_record.get("why") or ""
+    corpus_lower = raw_corpus.lower()
+
+    # 1. Contiguous multi-word quote verification (>=4 consecutive words)
+    contiguous_match = False
+    matched_phrase = ""
+    evidence_words = re.findall(r"\b\w+\b", evidence.lower())
+
+    if len(evidence_words) >= 4:
+        # Check window sizes of 4 to min(8, len(evidence_words))
+        window_size = 4
+        for i in range(len(evidence_words) - window_size + 1):
+            phrase = " ".join(evidence_words[i : i + window_size])
+            # Check regex with flexible whitespace
+            pattern = r"\b" + r"\s+".join(re.escape(w) for w in evidence_words[i : i + window_size]) + r"\b"
+            if re.search(pattern, corpus_lower):
+                contiguous_match = True
+                matched_phrase = phrase
+                break
+    elif len(evidence_words) > 0:
+        # For short evidence (<4 words), match entire phrase
+        phrase = " ".join(evidence_words)
+        if phrase in corpus_lower:
+            contiguous_match = True
+            matched_phrase = phrase
+
+    # 2. Content word overlap (>= 60%)
+    stop_words = {"the", "a", "an", "is", "and", "or", "to", "in", "it", "of", "for", "on", "we", "this"}
+    test_words = [
+        w for w in re.findall(r"\b[a-zA-Z0-9_-]+\b", f"{why_text} {evidence}".lower())
+        if w not in stop_words and len(w) > 2
+    ]
+
+    if test_words:
+        matched_words = [w for w in test_words if w in corpus_lower]
+        word_overlap = len(matched_words) / len(test_words)
+    else:
+        word_overlap = 1.0
+
+    is_verified = (word_overlap >= 0.60) and contiguous_match
+
+    return {
+        "verified": is_verified,
+        "word_overlap": round(word_overlap, 4),
+        "contiguous_match": contiguous_match,
+        "matched_phrase": matched_phrase,
+        "reason": (
+            "Traceability verified: >=60% word overlap and contiguous verbatim quote found in source corpus."
+            if is_verified
+            else "Traceability failed: verbatim quote not found contiguously in source discussion."
+        ),
+    }
+
