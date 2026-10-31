@@ -89,7 +89,7 @@ def score_and_rank_discussion(
             or "maintainer" in role
             or "owner" in role
             or "author" in role
-            or author in ["gvanrossum", "torvalds", "maintainer", "core-team"]
+            or author in ["demo_user", "maintainer", "core-team"]
         ):
             score += 3.0
 
@@ -279,7 +279,7 @@ def resolve_contributor_identities(
     """Unifies contributor identities across GitHub handles, Git commit emails, and discuss.python.org.
 
     Solves Problem 06 Consideration #4:
-    - Unifies @gvanrossum, guido@python.org, and Guido van Rossum into a canonical maintainer profile.
+    - Unifies @demo_user, demo@example.com, and Demo User into a canonical maintainer profile.
     - Handles handles, emails, and forum display names.
     """
     profiles: List[Dict[str, Any]] = []
@@ -289,7 +289,7 @@ def resolve_contributor_identities(
 
     for p in participants:
         if isinstance(p, str):
-            # Parse string e.g. "Guido van Rossum <guido@python.org> (@gvanrossum)"
+            # Parse string e.g. "Demo User <demo@example.com> (@demo_user)"
             emails = re.findall(r"[\w\.-]+@[\w\.-]+", p)
             handles = re.findall(r"@([a-zA-Z0-9_-]+)", p)
             clean_name = re.sub(r"<[^>]+>|@[a-zA-Z0-9_-]+", "", p).strip()
@@ -507,12 +507,12 @@ def default_madr_fallback(case_bundle: Dict[str, Any]) -> Dict[str, Any]:
             "decided": "Comprehension iteration variables have localized inner scope in Python 3",
             "rejected": "Leaking comprehension variables into enclosing function or module namespace",
             "why": "Variable leaking created subtle bugs and shadowed outer variables unexpectedly.",
-            "sources": ["discuss.python.org", "PEP-572-thread", "#thread-4821"],
+            "sources": ["discuss.python.org", "#pep-scoping"],
             "verbatim_evidence": "leaking variables creates subtle bugs and shadows outer variables",
             "rejected_alternatives_detailed": [
                 {
                     "alternative": "Retain Python 2 variable leakage for backward compatibility",
-                    "reason_rejected": "Unanimously voted down due to namespace pollution and mutation risks.",
+                    "reason_rejected": "Rejected due to namespace pollution and mutation risks.",
                 }
             ],
             "bot_warning": "Warning: Historical consensus established localized comprehension scoping to prevent variable leakage.",
@@ -528,7 +528,7 @@ def default_madr_fallback(case_bundle: Dict[str, Any]) -> Dict[str, Any]:
         "rejected_alternatives_detailed": [
             {
                 "alternative": "Rewrite in Rust (PR #1901)",
-                "reason_rejected": "Benchmark showed 2x slower throughput on 50MB+ token streams due to FFI boundary overhead.",
+                "reason_rejected": "Benchmark showed 2x slower throughput on big files compared to the C parser.",
             }
         ],
         "bot_warning": "Tried in 2022 and reverted: 2x slower. See #1901.",

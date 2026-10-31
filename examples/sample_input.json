@@ -23,7 +23,7 @@
           {
             "id": 140,
             "author": "bench_bot",
-            "body": "Benchmark completed: Rust rewrite was 2x slower on big files compared to the C parser due to FFI boundary marshaling.",
+            "body": "Benchmark completed: Rust rewrite was 2x slower on big files compared to the C parser.",
             "is_maintainer": false
           },
           {
@@ -55,9 +55,9 @@
       "source_platform": "discuss.python.org",
       "raw_text": "Discussion Thread on Comprehension Scoping: In Python 2, list comprehension variables leaked into the outer function scope. Several proposals suggested keeping the Python 2 variable leaking behavior for backward compatibility. Core developers rejected retaining variable leakage because leaking comprehension variables creates subtle bugs and shadows outer variables unpredictably. The consensus decided that comprehension iteration variables have localized inner scope in Python 3. All alternative proposals to leak loop variables or dynamically bind them were firmly rejected.",
       "participants": [
-        {"name": "Guido van Rossum", "github": "gvanrossum", "email": "guido@python.org"},
-        {"forum_name": "Guido van Rossum", "email": "guido@python.org"},
-        {"name": "Core Dev", "github": "coredev", "email": "dev@python.org"}
+        {"name": "Demo User", "github": "demo_user", "email": "demo@example.com"},
+        {"forum_name": "Demo User", "email": "demo@example.com"},
+        {"name": "Core Dev", "github": "coredev", "email": "dev@example.com"}
       ],
       "code_anchor": {
         "diff_header": "diff --git a/compiler/symtable.py b/compiler/symtable.py\n@@ -85,30 +85,30 @@ def compile_comprehension_scope(node, context)",

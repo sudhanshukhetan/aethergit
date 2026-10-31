@@ -142,22 +142,22 @@ class TestRenameRelinkerAndIdentity(unittest.TestCase):
     def test_resolve_contributor_identities(self):
         """Tests unifying GitHub handle, Git email, and discuss forum name into single canonical profile."""
         participants = [
-            {"github": "gvanrossum", "email": "guido@python.org"},
-            {"forum_name": "Guido van Rossum", "email": "guido@python.org"},
-            "Guido van Rossum <guido@python.org> (@gvanrossum)",
+            {"github": "demo_user", "email": "demo@example.com"},
+            {"forum_name": "Demo User", "email": "demo@example.com"},
+            "Demo User <demo@example.com> (@demo_user)",
             {"github": "kushagar", "email": "kushagar@example.com", "name": "Kushagar"},
         ]
         res = resolve_contributor_identities(participants)
         canonical = res["canonical_profiles"]
         lookup = res["lookup_map"]
 
-        self.assertIn("gvanrossum", canonical)
-        prof = canonical["gvanrossum"]
-        self.assertEqual(prof["github"], "gvanrossum")
-        self.assertIn("guido@python.org", prof["emails"])
-        self.assertIn("guido van rossum", lookup)
-        self.assertIn("guido@python.org", lookup)
-        self.assertIn("@gvanrossum", lookup)
+        self.assertIn("demo_user", canonical)
+        prof = canonical["demo_user"]
+        self.assertEqual(prof["github"], "demo_user")
+        self.assertIn("demo@example.com", prof["emails"])
+        self.assertIn("demo user", lookup)
+        self.assertIn("demo@example.com", lookup)
+        self.assertIn("@demo_user", lookup)
 
     def test_verify_source_traceability_success(self):
         """Tests contiguous phrase matching and word overlap for genuine evidence."""
