@@ -84,6 +84,41 @@ class TestApiEndpoints(unittest.TestCase):
         self.assertFalse(data_outside.get("is_regression"))
         self.assertFalse(data_outside.get("touches_anchor"))
 
+    def test_post_api_check_pr_invalid_slider(self):
+        """POST /api/check-pr with invalid slider_val returns HTTP 400."""
+        for invalid_val in ["abc", None, 0, 301]:
+            res = self.client.post("/api/check-pr", json={"slider_val": invalid_val})
+            self.assertEqual(res.status_code, 400, f"Expected 400 for slider_val={invalid_val}")
+            data = res.get_json()
+            self.assertIn("error", data)
+            self.assertIn("slider_val must be a whole number from 1 to 300", data["error"])
+
+    def test_post_endpoints_list_body_no_500(self):
+        """All POST endpoints with JSON list body [1, 2, 3] return 200/400, never HTTP 500."""
+        endpoints = ["/api/extract", "/api/evaluate-pep", "/api/relink", "/api/check-pr"]
+        for ep in endpoints:
+            res = self.client.post(ep, json=[1, 2, 3])
+            self.assertIn(res.status_code, [200, 400], f"Endpoint {ep} returned {res.status_code}")
+            self.assertNotEqual(res.status_code, 500)
+
+    def test_post_api_evaluate_pep_custom_discussion(self):
+        """POST /api/evaluate-pep with discussion_text does not return comprehension sample record."""
+        custom_text = "We decided to keep Python 3.11 in CI because 3.12 broke numpy builds."
+        res = self.client.post("/api/evaluate-pep", json={"discussion_text": custom_text})
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertNotEqual(data.get("decided"), "Comprehension iteration variables have localized inner scope in Python 3")
+        self.assertEqual(data.get("source"), "rule-based-fallback (not AI)")
+
+    def test_post_api_extract_custom_issue(self):
+        """POST /api/extract with custom issue_text does not return C parser record."""
+        custom_issue = "users trust the login flow"
+        res = self.client.post("/api/extract", json={"issue_text": custom_issue})
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertNotEqual(data.get("decided"), "Keep the C parser")
+        self.assertEqual(data.get("source"), "rule-based-fallback (not AI)")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -159,6 +159,29 @@ class TestRenameRelinkerAndIdentity(unittest.TestCase):
         self.assertIn("demo@example.com", lookup)
         self.assertIn("@demo_user", lookup)
 
+    def test_resolve_contributor_identities_separate_profiles(self):
+        """Tests that different handles/emails never merge on display name or prefix alone."""
+        # Two 'John Smith' with different handles/emails produce 2 separate profiles
+        participants = [
+            {"name": "John Smith", "github": "jsmith1", "email": "jsmith1@example.com"},
+            {"name": "John Smith", "github": "jsmith2", "email": "jsmith2@example.com"},
+        ]
+        res = resolve_contributor_identities(participants)
+        canonical = res["canonical_profiles"]
+        self.assertEqual(len(canonical), 2)
+        self.assertIn("jsmith1", canonical)
+        self.assertIn("jsmith2", canonical)
+        self.assertIn("jsmith2", canonical["jsmith1"]["possible_matches"])
+        self.assertIn("jsmith1", canonical["jsmith2"]["possible_matches"])
+
+        # 'admin@a.com' vs 'admin@b.com' produce 2 separate profiles (no merge on email prefix)
+        admin_res = resolve_contributor_identities([
+            {"email": "admin@a.com"},
+            {"email": "admin@b.com"},
+        ])
+        admin_canonical = admin_res["canonical_profiles"]
+        self.assertEqual(len(admin_canonical), 2)
+
     def test_verify_source_traceability_success(self):
         """Tests contiguous phrase matching and word overlap for genuine evidence."""
         raw_corpus = """
@@ -189,6 +212,16 @@ class TestRenameRelinkerAndIdentity(unittest.TestCase):
         self.assertFalse(res["verified"])
         self.assertFalse(res["contiguous_match"])
 
+        # A quote whose first 4 words match but the rest is invented produces contiguous_match = False
+        corpus_with_prefix = "The C parser was kept because 2x slower on big files compared to the C parser."
+        partially_invented_record = {
+            "decided": "Keep C parser",
+            "why": "2x slower on big files completely fabricated text here",
+            "verbatim_evidence": "2x slower on big files completely fabricated text here",
+        }
+        partial_res = verify_source_traceability(partially_invented_record, corpus_with_prefix)
+        self.assertFalse(partial_res["contiguous_match"])
+
 
 class TestGemmaOllamaInference(unittest.TestCase):
     def test_detect_local_gemma_model(self):
@@ -215,7 +248,7 @@ class TestGemmaOllamaInference(unittest.TestCase):
         self.assertEqual(res["rejected"], "Rewrite in Rust")
 
     def test_evaluate_pr_regression_guard(self):
-        """Tests that PR repeating rejected alternative triggers warning bot alert."""
+        """Tests that PR repeating rejected alternative triggers warning bot alert with matched keywords."""
         decision_record = {
             "decided": "Keep the C parser",
             "rejected": "Rewrite in Rust",
@@ -226,8 +259,23 @@ class TestGemmaOllamaInference(unittest.TestCase):
         pr_text = "PR #2450: Complete rewrite of token parser in Rust for memory safety."
         eval_res = evaluate_pr_regression_with_gemma(pr_text, decision_record)
         self.assertTrue(eval_res["is_regression"])
-        self.assertGreaterEqual(eval_res["confidence"], 0.80)
+        self.assertIn("rewrite", eval_res["matched_keywords"])
+        self.assertIn("rust", eval_res["matched_keywords"])
         self.assertEqual(eval_res["alert_message"], "Tried in 2022 and reverted: 2x slower. See #1901.")
+
+        # 'Rewrite parser in Rust' must be a regression
+        res_rust = evaluate_pr_regression_with_gemma("Rewrite parser in Rust", decision_record)
+        self.assertTrue(res_rust["is_regression"])
+        self.assertIn("rewrite", res_rust["matched_keywords"])
+        self.assertIn("rust", res_rust["matched_keywords"])
+
+        # 'Trust the parser' must NOT be a regression
+        res_trust = evaluate_pr_regression_with_gemma("Trust the parser", decision_record)
+        self.assertFalse(res_trust["is_regression"])
+
+        # 'Rewrite README intro' must NOT be a regression
+        res_readme = evaluate_pr_regression_with_gemma("Rewrite README intro", decision_record)
+        self.assertFalse(res_readme["is_regression"])
 
         # An innocent PR fixing a typo
         innocent_pr = "PR #2451: Fix documentation typo in README comments."

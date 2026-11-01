@@ -278,18 +278,18 @@ def resolve_contributor_identities(
 ) -> Dict[str, Any]:
     """Unifies contributor identities across GitHub handles, Git commit emails, and discuss.python.org.
 
-    Solves Problem 06 Consideration #4:
-    - Unifies @demo_user, demo@example.com, and Demo User into a canonical maintainer profile.
-    - Handles handles, emails, and forum display names.
+    Rules:
+    - Merges profiles ONLY on an exact GitHub handle match or an exact full email match (case-insensitive).
+    - Never merges on display name alone or email prefix before '@'.
+    - Same-name people go into separate profiles with 'possible_matches' listing suggestions.
     """
     profiles: List[Dict[str, Any]] = []
 
-    def normalize_token(s: str) -> str:
+    def normalize_name(s: str) -> str:
         return re.sub(r"[^a-zA-Z0-9]", "", s).lower()
 
-    for p in participants:
+    for idx, p in enumerate(participants):
         if isinstance(p, str):
-            # Parse string e.g. "Demo User <demo@example.com> (@demo_user)"
             emails = re.findall(r"[\w\.-]+@[\w\.-]+", p)
             handles = re.findall(r"@([a-zA-Z0-9_-]+)", p)
             clean_name = re.sub(r"<[^>]+>|@[a-zA-Z0-9_-]+", "", p).strip()
@@ -302,51 +302,44 @@ def resolve_contributor_identities(
         else:
             item = dict(p)
 
-        name = item.get("name") or item.get("forum_name") or ""
-        github = (item.get("github") or "").lstrip("@")
-        email = item.get("email") or ""
-        forum_name = item.get("forum_name") or name
+        name = (item.get("name") or item.get("forum_name") or "").strip()
+        raw_github = item.get("github") or ""
+        github = raw_github.lstrip("@").strip()
+        email = (item.get("email") or "").strip()
+        forum_name = (item.get("forum_name") or name).strip()
 
-        # Collect keys to cluster
-        keys = set()
-        if github:
-            keys.add(normalize_token(github))
-        if email:
-            keys.add(normalize_token(email.split("@")[0]))
-            keys.add(email.lower())
-        if name:
-            keys.add(normalize_token(name))
-
-        # Check if matches existing profile
         matched_profile = None
         for prof in profiles:
-            if keys.intersection(prof["_cluster_keys"]):
+            # Only merge on exact GitHub handle or exact full email match
+            gh_match = bool(github and prof.get("github") and github.lower() == prof["github"].lower())
+            email_match = bool(email and any(email.lower() == e.lower() for e in prof.get("emails", [])))
+            if gh_match or email_match:
                 matched_profile = prof
                 break
 
         if matched_profile is None:
-            canonical_handle = github or (email.split("@")[0] if email else normalize_token(name))
+            canonical_id = github or email or (f"{normalize_name(name)}_{idx+1}" if name else f"user_{idx+1}")
             matched_profile = {
-                "canonical_id": canonical_handle,
+                "canonical_id": canonical_id,
                 "name": name or github or email,
-                "github": github,
+                "canonical_name": name or github or email,
+                "github": github if github else None,
                 "emails": [email] if email else [],
                 "forum_names": [forum_name] if forum_name else [],
                 "aliases": set(),
-                "_cluster_keys": set(keys),
+                "possible_matches": [],
             }
             profiles.append(matched_profile)
         else:
-            # Merge
-            if github and not matched_profile["github"]:
+            if github and not matched_profile.get("github"):
                 matched_profile["github"] = github
             if email and email not in matched_profile["emails"]:
                 matched_profile["emails"].append(email)
             if forum_name and forum_name not in matched_profile["forum_names"]:
                 matched_profile["forum_names"].append(forum_name)
-            if name and not matched_profile["name"]:
+            if name and not matched_profile.get("name"):
                 matched_profile["name"] = name
-            matched_profile["_cluster_keys"].update(keys)
+                matched_profile["canonical_name"] = name
 
         if github:
             matched_profile["aliases"].add(f"@{github}")
@@ -356,10 +349,17 @@ def resolve_contributor_identities(
         if forum_name:
             matched_profile["aliases"].add(forum_name)
 
-    # Clean internal keys and convert aliases to sorted list
+    # Post-process possible matches for same-name profiles that remain separate
+    for i, prof_a in enumerate(profiles):
+        norm_a = normalize_name(prof_a["name"])
+        for j, prof_b in enumerate(profiles):
+            if i != j and norm_a and norm_a == normalize_name(prof_b["name"]):
+                cid_b = prof_b["canonical_id"]
+                if cid_b not in prof_a["possible_matches"]:
+                    prof_a["possible_matches"].append(cid_b)
+
     result: Dict[str, Any] = {"canonical_profiles": {}, "lookup_map": {}}
     for prof in profiles:
-        prof.pop("_cluster_keys", None)
         prof["aliases"] = sorted(list(prof["aliases"]))
         cid = prof["canonical_id"]
         result["canonical_profiles"][cid] = prof
@@ -377,45 +377,40 @@ def verify_source_traceability(
 
     Solves Problem 06 Consideration #5:
     - Verifies >=60% content-word overlap
-    - Verifies a contiguous phrase match (>=4 consecutive words) from verbatim_evidence inside raw_corpus
-    - Rejects hallucinated AI summaries
+    - Verifies that the WHOLE normalized verbatim evidence string (>=4 words, lowercase, punctuation removed,
+      spaces collapsed) appears inside the normalized source corpus.
+    - Rejects hallucinated AI summaries or partially invented quotes.
     """
     evidence = decision_record.get("verbatim_evidence") or decision_record.get("quote") or ""
     why_text = decision_record.get("why") or ""
-    corpus_lower = raw_corpus.lower()
 
-    # 1. Contiguous multi-word quote verification (>=4 consecutive words)
+    def normalize_text(text: str) -> str:
+        cleaned = re.sub(r"[^\w\s]", " ", text.lower())
+        return " ".join(cleaned.split())
+
+    norm_evidence = normalize_text(evidence)
+    norm_corpus = normalize_text(raw_corpus)
+    evidence_words = norm_evidence.split()
+
+    # Contiguous verbatim quote verification (whole evidence must match, minimum 4 words)
     contiguous_match = False
     matched_phrase = ""
-    evidence_words = re.findall(r"\b\w+\b", evidence.lower())
 
     if len(evidence_words) >= 4:
-        # Check window sizes of 4 to min(8, len(evidence_words))
-        window_size = 4
-        for i in range(len(evidence_words) - window_size + 1):
-            phrase = " ".join(evidence_words[i : i + window_size])
-            # Check regex with flexible whitespace
-            pattern = r"\b" + r"\s+".join(re.escape(w) for w in evidence_words[i : i + window_size]) + r"\b"
-            if re.search(pattern, corpus_lower):
-                contiguous_match = True
-                matched_phrase = phrase
-                break
-    elif len(evidence_words) > 0:
-        # For short evidence (<4 words), match entire phrase
-        phrase = " ".join(evidence_words)
-        if phrase in corpus_lower:
+        if norm_evidence and norm_evidence in norm_corpus:
             contiguous_match = True
-            matched_phrase = phrase
+            matched_phrase = norm_evidence
 
-    # 2. Content word overlap (>= 60%)
+    # Content word overlap (>= 60%)
     stop_words = {"the", "a", "an", "is", "and", "or", "to", "in", "it", "of", "for", "on", "we", "this"}
     test_words = [
         w for w in re.findall(r"\b[a-zA-Z0-9_-]+\b", f"{why_text} {evidence}".lower())
         if w not in stop_words and len(w) > 2
     ]
 
+    corpus_words = set(norm_corpus.split())
     if test_words:
-        matched_words = [w for w in test_words if w in corpus_lower]
+        matched_words = [w for w in test_words if w in corpus_words]
         word_overlap = len(matched_words) / len(test_words)
     else:
         word_overlap = 1.0
@@ -483,11 +478,14 @@ def detect_local_gemma_model(default_model: str = DEFAULT_MODEL) -> Dict[str, An
 def default_madr_fallback(case_bundle: Dict[str, Any]) -> Dict[str, Any]:
     """Deterministic fallback output matching the Slide 6 or PEP benchmark when Ollama is offline/CI."""
     if "expected_output" in case_bundle:
-        return dict(case_bundle["expected_output"])
+        res = dict(case_bundle["expected_output"])
+        res.setdefault("source", "cached-demo")
+        return res
 
     scenario = case_bundle.get("scenario_id") or ""
     if "go" in scenario.lower() or "generics" in scenario.lower():
         return {
+            "source": "cached-demo",
             "decided": "Type parameter constraints via interfaces with dual-mode compilation",
             "rejected": "C++-style template monomorphization and macro expansion",
             "why": "Unbounded monomorphization causes compiler slowdowns and massive binary code bloat.",
@@ -504,6 +502,7 @@ def default_madr_fallback(case_bundle: Dict[str, Any]) -> Dict[str, Any]:
 
     if "pep" in scenario.lower() or "comprehension" in scenario.lower():
         return {
+            "source": "cached-demo",
             "decided": "Comprehension iteration variables have localized inner scope in Python 3",
             "rejected": "Leaking comprehension variables into enclosing function or module namespace",
             "why": "Variable leaking created subtle bugs and shadowed outer variables unexpectedly.",
@@ -520,6 +519,7 @@ def default_madr_fallback(case_bundle: Dict[str, Any]) -> Dict[str, Any]:
 
     # Default Slide 6 benchmark (C parser vs Rust rewrite)
     return {
+        "source": "cached-demo",
         "decided": "Keep the C parser",
         "rejected": "Rewrite in Rust",
         "why": "2x slower on big files compared to the C parser",
@@ -541,13 +541,14 @@ def extract_decision_record_with_gemma(
 ) -> Dict[str, Any]:
     """Extracts formal MADR Decision Record using local Gemma 4 (gemma4:e4b via Ollama).
 
-    - Calls POST /api/generate with format='json', stream=False, timeout=6.
-    - Includes 1 automatic retry on malformed JSON.
-    - Extracts: decided, rejected, why, sources, verbatim_evidence, rejected_alternatives_detailed, bot_warning.
+    - Calls POST /api/generate with stream=False, timeout=180.
+    - Prompts local Gemma and parses the first {...} JSON block in response.
+    - Sets source='live-gemma4' on real model response, or 'cached-demo' on fallback.
     - Seamlessly falls back to verified deterministic output in CI or when Ollama is offline.
     """
     if os.environ.get("CI") == "true" or case_bundle.get("force_mock"):
         record = default_madr_fallback(case_bundle)
+        record["source"] = "cached-demo"
         # Verify traceability against raw text if present
         raw_corpus = case_bundle.get("raw_text") or case_bundle.get("discussion_thread") or ""
         if raw_corpus:
@@ -555,7 +556,6 @@ def extract_decision_record_with_gemma(
             record["traceability"] = trace
         return record
 
-    # Check local Ollama health first
     prompt_context = case_bundle.get("raw_text") or case_bundle.get("discussion_thread") or ""
     prompt = f"""You are an architectural knowledge recovery engine.
 Read the following software engineering discussion and extract the architectural decision into strict JSON.
@@ -570,12 +570,12 @@ JSON keys must be:
 
 DISCUSSION:
 {prompt_context[:3500]}
+Reply with JSON only.
 """
 
     payload = {
         "model": model_name,
         "prompt": prompt,
-        "format": "json",
         "stream": False,
         "options": {
             "temperature": 0.1,
@@ -585,20 +585,25 @@ DISCUSSION:
     # Attempt up to 2 calls (1 retry on malformed json)
     for attempt in range(2):
         try:
-            resp = requests.post(f"{OLLAMA_URL}/api/generate", json=payload, timeout=6)
+            resp = requests.post(f"{OLLAMA_URL}/api/generate", json=payload, timeout=180)
             if resp.status_code == 200:
-                raw_json = resp.json().get("response", "{}")
-                data = json.loads(raw_json)
-                if "decided" in data and "rejected" in data:
-                    # Enrich with source traceability verification
-                    if prompt_context:
-                        data["traceability"] = verify_source_traceability(data, prompt_context)
-                    return data
+                resp_text = resp.json().get("response", "")
+                start_idx = resp_text.find("{")
+                end_idx = resp_text.rfind("}")
+                if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                    data = json.loads(resp_text[start_idx : end_idx + 1])
+                    if "decided" in data and "rejected" in data:
+                        data["source"] = "live-gemma4"
+                        # Enrich with source traceability verification
+                        if prompt_context:
+                            data["traceability"] = verify_source_traceability(data, prompt_context)
+                        return data
         except Exception:
             pass
 
     # Safe deterministic fallback
     record = default_madr_fallback(case_bundle)
+    record["source"] = "cached-demo"
     if prompt_context:
         record["traceability"] = verify_source_traceability(record, prompt_context)
     return record
@@ -611,38 +616,29 @@ def evaluate_pr_regression_with_gemma(
 ) -> Dict[str, Any]:
     """Evaluates whether an incoming Pull Request repeats a historically rejected decision.
 
-    Combines semantic keyword analysis with local Gemma validation to alert maintainers.
+    Uses whole-word matching against keywords of length > 3 from rejected decision.
+    Requires at least 2 matching keywords (or all if < 2) to flag a regression.
     """
     rejected = (decision_record.get("rejected") or "").lower()
     why = (decision_record.get("why") or "").lower()
-    pr_lower = pr_text.lower()
 
-    # Extract core keywords from rejected decision (e.g. "rust", "rewrite", "parser")
-    rej_keywords = [w for w in re.findall(r"\b\w+\b", rejected) if len(w) > 3]
+    # Extract unique keywords of length > 3 from rejected decision
+    raw_keywords = [w.lower() for w in re.findall(r"\b[a-zA-Z0-9_]+\b", rejected) if len(w) > 3]
+    rej_keywords = list(dict.fromkeys(raw_keywords))
 
-    is_regression = False
-    confidence = 0.0
+    matched_keywords = []
+    for kw in rej_keywords:
+        if re.search(rf"\b{re.escape(kw)}\b", pr_text, re.IGNORECASE):
+            matched_keywords.append(kw)
 
-    if rej_keywords:
-        hits = [kw for kw in rej_keywords if kw in pr_lower]
-        ratio = len(hits) / len(rej_keywords)
-        if ratio >= 0.5:
-            is_regression = True
-            confidence = min(0.95, 0.60 + 0.35 * ratio)
-    elif rejected and rejected in pr_lower:
-        is_regression = True
-        confidence = 0.90
-
-    # Also check if PR touches lines/function and mentions the rejected language/tool
-    if "rust" in rejected and "rust" in pr_lower:
-        is_regression = True
-        confidence = max(confidence, 0.95)
+    threshold = min(2, len(rej_keywords)) if rej_keywords else 1
+    is_regression = (len(matched_keywords) >= threshold) if rej_keywords else False
 
     alert_msg = decision_record.get("bot_warning") or f"Historical architectural decision vetoed {rejected}: {why}"
 
     return {
         "is_regression": is_regression,
-        "confidence": round(confidence, 2),
+        "matched_keywords": matched_keywords,
         "alert_message": alert_msg if is_regression else None,
         "matched_decision": decision_record.get("decided"),
         "rejected_approach": decision_record.get("rejected"),
