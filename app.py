@@ -73,12 +73,26 @@ def api_status():
     })
 
 
+SAMPLE_SLIDE_6_TEXT = (
+    "Issue #1832 (140 replies) & Reverted PR #1901: In 2022 benchmark runs, the Rust rewrite was 2x slower on big files compared to the C parser. We reverted #1901 and decided to keep the C parser."
+)
+
+SAMPLE_PEP_TEXT = (
+    "Discussion Thread on Comprehension Scoping (discuss.python.org):\n"
+    "In Python 2, list comprehension variables leaked into the outer function scope.\n"
+    "Several developers proposed retaining Python 2 variable leaking behavior for backward compatibility.\n"
+    "Core developers rejected retaining variable leakage because leaking comprehension variables creates subtle bugs and shadows outer variables unpredictably.\n"
+    "The consensus decided that comprehension iteration variables have localized inner scope in Python 3.\n"
+    "All alternative proposals to leak loop variables or dynamically bind them were firmly rejected."
+)
+
+
 def dynamic_custom_discussion_extractor(corpus: str) -> dict:
     """Dynamically parses custom text using NLP and regex to extract real decisions, reasons, and verbatim quotes."""
     lines = [line.strip() for line in corpus.splitlines() if line.strip()]
     sources = list(set(re.findall(r"#\d+", corpus)))
     if not sources:
-        sources = ["#discussion-thread", "open-source-consensus"]
+        sources = []
 
     decided = None
     rejected = None
@@ -96,27 +110,32 @@ def dynamic_custom_discussion_extractor(corpus: str) -> dict:
             why = s_clean
 
     if not decided:
-        decided = lines[-1] if lines else "Historical maintainer consensus established"
+        decided = lines[-1] if lines else "unknown"
     if not rejected:
-        rejected = "Alternative proposals or experimental regressions"
+        rejected = "unknown"
     if not why:
-        why = "Technical overhead, regression risks, and subtle bugs documented in discussion."
+        why = "unknown"
 
     bench_match = re.search(r"(\d+x slower[^\.,;\n]*)", corpus, re.IGNORECASE)
     if bench_match:
         verbatim_evidence = bench_match.group(1).strip()
-        why = f"{bench_match.group(1).strip()} compared to baseline."
+        why = bench_match.group(1).strip()
     else:
         words = corpus.split()
         verbatim_evidence = " ".join(words[2:8]) if len(words) >= 8 else corpus.strip()[:60]
 
     return {
+        "source": "rule-based-fallback (not AI)",
         "decided": decided,
         "rejected": rejected,
         "why": why,
         "sources": sources,
         "verbatim_evidence": verbatim_evidence,
-        "bot_warning": f"Warning: Historical consensus rejected alternative: {rejected[:60]} ({why[:60]}).",
+        "bot_warning": (
+            f"Warning: Historical consensus rejected alternative: {rejected[:60]} ({why[:60]})."
+            if rejected != "unknown"
+            else "Warning: Historical architectural consensus established."
+        ),
     }
 
 
@@ -126,10 +145,9 @@ def api_extract():
     if request.method == "OPTIONS":
         return jsonify({"ok": True}), 200
 
-    data = request.get_json(silent=True) or {}
-    raw_text = data.get("issue_text") or (
-        "Issue #1832 (140 replies) & Reverted PR #1901: In 2022 benchmark runs, the Rust rewrite was 2x slower on big files compared to the C parser. We reverted #1901 and decided to keep the C parser."
-    )
+    raw_data = request.get_json(silent=True)
+    data = raw_data if isinstance(raw_data, dict) else {}
+    raw_text = data.get("issue_text") or data.get("raw_text") or data.get("text") or SAMPLE_SLIDE_6_TEXT
     diff_header = data.get("diff_header") or "diff --git a/parser/core.c b/parser/core.c\n@@ -40,80 +40,80 @@ int parse_token_stream(TokenStream* ts)"
     code_snippet = data.get("code_snippet") or "int parse_token_stream(TokenStream* ts) { /* C implementation */ }"
 
@@ -141,15 +159,16 @@ def api_extract():
     # Run AST Diff parsing
     anchor = parse_diff_and_symbol_anchor(diff_header, code_snippet)
 
+    is_exact_sample = (raw_text.strip() == SAMPLE_SLIDE_6_TEXT.strip())
+
     # Check local Ollama health
     model_status = detect_local_gemma_model(DEFAULT_MODEL)
-    if model_status.get("available") and not model_status.get("is_mock"):
+    if is_exact_sample:
+        record = extract_decision_record_with_gemma(bundle, model_name=DEFAULT_MODEL)
+    elif model_status.get("available") and not model_status.get("is_mock"):
         record = extract_decision_record_with_gemma(bundle, model_name=DEFAULT_MODEL)
     else:
-        if "1832" in raw_text or "rust" in raw_text.lower():
-            record = extract_decision_record_with_gemma(bundle, model_name=DEFAULT_MODEL)
-        else:
-            record = dynamic_custom_discussion_extractor(raw_text)
+        record = dynamic_custom_discussion_extractor(raw_text)
 
     # Contiguous quote traceability verification
     trace = verify_source_traceability(record, raw_text)
@@ -172,15 +191,9 @@ def api_evaluate_pep():
     if request.method == "OPTIONS":
         return jsonify({"ok": True}), 200
 
-    data = request.get_json(silent=True) or {}
-    corpus = data.get("corpus") or data.get("text") or (
-        "Discussion Thread on Comprehension Scoping (discuss.python.org):\n"
-        "In Python 2, list comprehension variables leaked into the outer function scope.\n"
-        "Several developers proposed retaining Python 2 variable leaking behavior for backward compatibility.\n"
-        "Core developers rejected retaining variable leakage because leaking comprehension variables creates subtle bugs and shadows outer variables unpredictably.\n"
-        "The consensus decided that comprehension iteration variables have localized inner scope in Python 3.\n"
-        "All alternative proposals to leak loop variables or dynamically bind them were firmly rejected."
-    )
+    raw_data = request.get_json(silent=True)
+    data = raw_data if isinstance(raw_data, dict) else {}
+    corpus = data.get("discussion_text") or data.get("corpus") or data.get("text") or SAMPLE_PEP_TEXT
 
     # Message parsing and signal weighting
     raw_lines = [l.strip() for l in corpus.splitlines() if l.strip()]
@@ -196,14 +209,15 @@ def api_evaluate_pep():
     ranked = score_and_rank_discussion(messages, top_k=5)
 
     bundle = {"scenario_id": "pep_discussion_recovery", "raw_text": corpus}
+    is_exact_sample = (corpus.strip() == SAMPLE_PEP_TEXT.strip())
+
     model_status = detect_local_gemma_model(DEFAULT_MODEL)
-    if model_status.get("available") and not model_status.get("is_mock"):
+    if is_exact_sample:
+        record = extract_decision_record_with_gemma(bundle, model_name=DEFAULT_MODEL)
+    elif model_status.get("available") and not model_status.get("is_mock"):
         record = extract_decision_record_with_gemma(bundle, model_name=DEFAULT_MODEL)
     else:
-        if "comprehension" in corpus.lower() or "python" in corpus.lower():
-            record = extract_decision_record_with_gemma(bundle, model_name=DEFAULT_MODEL)
-        else:
-            record = dynamic_custom_discussion_extractor(corpus)
+        record = dynamic_custom_discussion_extractor(corpus)
 
     trace = verify_source_traceability(record, corpus)
     record["traceability"] = trace
@@ -220,7 +234,8 @@ def api_relink():
     if request.method == "OPTIONS":
         return jsonify({"ok": True}), 200
 
-    data = request.get_json(silent=True) or {}
+    raw_data = request.get_json(silent=True)
+    data = raw_data if isinstance(raw_data, dict) else {}
     symbol = data.get("symbol", "parse_token_stream")
     old_body = data.get("old_body", "int parse_token_stream(TokenStream* ts) { while(next_token(ts, &t)) { process(); } }")
     candidates = data.get("candidates") or [
@@ -253,9 +268,35 @@ def api_check_pr():
     if request.method == "OPTIONS":
         return jsonify({"ok": True}), 200
 
-    data = request.get_json(silent=True) or {}
+    raw_data = request.get_json(silent=True)
+    data = raw_data if isinstance(raw_data, dict) else {}
+
+    # Parse slider_val safely
+    if "slider_val" in data:
+        val = data["slider_val"]
+        if val is None or isinstance(val, bool):
+            return jsonify({"error": "slider_val must be a whole number from 1 to 300"}), 400
+        try:
+            if isinstance(val, (int, float)):
+                if isinstance(val, float) and not val.is_integer():
+                    return jsonify({"error": "slider_val must be a whole number from 1 to 300"}), 400
+                slider_val = int(val)
+            elif isinstance(val, str):
+                val_str = val.strip()
+                if not re.match(r"^-?\d+$", val_str):
+                    return jsonify({"error": "slider_val must be a whole number from 1 to 300"}), 400
+                slider_val = int(val_str)
+            else:
+                return jsonify({"error": "slider_val must be a whole number from 1 to 300"}), 400
+        except (ValueError, TypeError):
+            return jsonify({"error": "slider_val must be a whole number from 1 to 300"}), 400
+
+        if slider_val < 1 or slider_val > 300:
+            return jsonify({"error": "slider_val must be a whole number from 1 to 300"}), 400
+    else:
+        slider_val = 45
+
     pr_title = data.get("pr_title") or "Rewrite parse_token_stream in Rust for safety"
-    slider_val = int(data.get("slider_val", 45))
 
     record = {
         "decided": "Keep the C parser",
@@ -272,7 +313,7 @@ def api_check_pr():
         "touches_anchor": touches_anchor,
         "is_regression": is_regression,
         "alert_message": eval_result.get("alert_message") if is_regression else "PR Approved - No Architectural Regression",
-        "confidence": eval_result.get("confidence", 0.95),
+        "matched_keywords": eval_result.get("matched_keywords", []),
         "anchor": "parser/core.c (lines 40–120) -> parse_token_stream()",
     })
 
