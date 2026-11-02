@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AetherGit · Open Source Decision Intelligence</title>
+<meta name="description" content="Recover lost architectural consensus from past PRs and discussions. Live extraction, quote verification, rename-resilient anchors and a PR regression firewall, served by a local API.">
+<meta property="og:title" content="AetherGit · Open Source Decision Intelligence">
+<meta property="og:description" content="Recover lost architectural consensus. Live decision extraction, AST-lite anchors and a PR regression firewall.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#12151c;--panel:#1a1f29;--line:#2c3441;--text:#e8eaf0;--mute:#97a0b0;--amber:#f0b441;--add:#5fd08a;--del:#ff7a7a;color-scheme:dark}
+@media (prefers-color-scheme:light){:root{--bg:#f6f4ef;--panel:#fff;--line:#d9d5ca;--text:#1d2129;--mute:#5d6573;--amber:#9a6200;--add:#14753f;--del:#b3261e;color-scheme:light}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 "IBM Plex Sans",system-ui,sans-serif}
+main{max-width:920px;margin:0 auto;padding:32px 20px 80px}
+h1{font-size:2.4rem;margin:0;letter-spacing:-.02em}h2{font-size:1.3rem;margin:0 0 6px}p{margin:.3em 0 1em;color:var(--mute);max-width:70ch}
+code,pre,textarea,input,.mono{font-family:"IBM Plex Mono",monospace;font-size:.88rem}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:18px}
+#status{font-size:.85rem;padding:4px 10px;border:1px solid var(--line);border-radius:99px}
+#status.on{border-color:var(--add);color:var(--add)}
+section{margin-top:44px;padding-left:18px;border-left:3px solid var(--amber)}
+textarea,input,select{width:100%;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:9px 10px}
+textarea{min-height:150px;resize:vertical}
+input:focus,textarea:focus,button:focus-visible,summary:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
+.row{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin:10px 0}
+label{font-size:.85rem;color:var(--mute);display:block;margin-bottom:3px}
+button{background:var(--amber);color:#14110a;border:0;border-radius:6px;padding:9px 14px;font:600 .9rem "IBM Plex Sans";cursor:pointer}
+button.ghost{background:transparent;color:var(--text);border:1px solid var(--line);font-weight:500}
+button:disabled{opacity:.5;cursor:wait}.bar{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-top:14px}
+.del{color:var(--del)}.add{color:var(--add)}.k{font-weight:600}
+.diff{border-left:3px solid;padding:3px 10px;margin:6px 0}.diff.a{border-color:var(--add)}.diff.d{border-color:var(--del)}
+.badge{font:600 .8rem "IBM Plex Sans";padding:2px 8px;border-radius:4px;border:1px solid}
+.block{color:var(--del)}.warn{color:var(--amber)}.safe{color:var(--add)}
+details{margin-top:10px;color:var(--mute)}summary{cursor:pointer}
+small,.mute{color:var(--mute)}ul{padding-left:18px;margin:6px 0}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div><h1>⚡ AetherGit</h1><p style="margin:0">Recover why a decision was made, pin it to code, and stop it being undone. Everything below runs live on what you paste in.</p></div>
+  <span id="status" role="status">Connecting to local API…</span>
+</header>
+
+<section id="mine">
+  <h2>1. Recover a decision</h2>
+  <p>Paste an issue thread, PR diff header or forum discussion. AetherGit extracts what was decided, what was rejected and why, then checks that the quoted evidence really appears in your text.</p>
+  <div class="bar"><button class="ghost" data-ex="c">Load example: C parser vs Rust</button><button class="ghost" data-ex="pep">Load example: Python comprehension scoping</button></div>
+  <label for="thread">Discussion text</label><textarea id="thread" placeholder="Paste a discussion here…"></textarea>
+  <div class="bar"><button id="go">Extract decision</button></div>
+  <div id="result"></div>
+</section>
+
+<section id="firewall">
+  <h2>2. PR firewall</h2>
+  <p>Decisions you anchor above guard their code range. Simulate a pull request and see whether it repeats a rejected idea.</p>
+  <div class="row">
+    <div><label for="pt">PR title</label><input id="pt" value="Rewrite parser in Rust"></div>
+    <div><label for="pf">File</label><input id="pf" value="parser/core.c"></div>
+    <div><label for="pl">Modified line</label><input id="pl" type="number" value="55"></div>
+  </div>
+  <div class="bar"><button id="check">Check pull request</button><button class="ghost" id="seed">Add the C parser decision</button></div>
+  <div id="verdict"></div>
+  <h2 style="margin-top:22px;font-size:1.05rem">Saved decisions</h2><div id="saved"></div>
+</section>
+
+<section id="relink">
+  <h2>3. Relink after a rename and edit</h2>
+  <p>Finds the moved function by comparing signatures (50%) with a Ratcliff-Obershelp similarity of the bodies (50%). Relinks at 60% or higher.</p>
+  <div class="bar"><button class="ghost" id="rex">Load example</button></div>
+  <label for="orig">Original function</label><textarea id="orig"></textarea>
+  <label for="next" style="margin-top:8px">New file contents</label><textarea id="next"></textarea>
+  <div class="bar"><button id="rl">Find the function</button></div>
+  <div id="rlout"></div>
+</section>
+
+<section id="people">
+  <h2>4. Contributor graph</h2>
+  <p>One line per identity: <code>source | name | @handle | email</code>, in any field order. Identities sharing an email, handle or name are merged.</p>
+  <textarea id="ppl"></textarea>
+  <div class="bar"><button id="pp">Merge identities</button></div>
+  <div id="ppout"></div>
+</section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const api = (p, m = "GET", b) => fetch("/api/" + p, { method: m, headers: { "Content-Type": "application/json" }, body: b && JSON.stringify(b) }).then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); });
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let store = [];
+const refresh = async () => { store = await api("decisions"); renderSaved(); };
+const EX = {
+c: `Issue #1832 (key excerpt)
+**@bench_bot:** Benchmark completed: Rust rewrite was **2x slower on big files** compared to the C parser.
+**@maintainer_lead:** Consensus reached: Keep the C parser. Reverting #1901.
+diff --git a/parser/core.c b/parser/core.c
+@@ -40,81 +40,81 @@ int parse_token_stream(TokenStream* ts)
+-    // C parser implementation
++    // Attempted Rust rewrite (reverted)
+2022 forum: "PR #1901 was reverted because the Rust rewrite was 2x slower on big files compared to the C parser."`,
+pep: `In Python 2, list comprehension variables leaked into the outer function scope.
+Several developers proposed retaining Python 2 variable leaking behavior for backward compatibility.
+Core developers rejected retaining variable leakage because leaking comprehension variables creates subtle bugs and shadows outer variables unpredictably.
+The consensus decided that comprehension iteration variables have localized inner scope in Python 3.
+All alternative proposals to leak loop variables or dynamically bind them were firmly rejected.`};
+const REL = { o: "int parse_token_stream(TokenStream* ts) {\n    Token t = next_token(ts);\n    while (t.kind != TOK_EOF) { emit(t); t = next_token(ts); }\n    return 0;\n}",
+  n: "static void init_lexer(Lexer* lx) {\n    lx->pos = 0;\n}\n\nint parse_token_stream(TokenStream* ts) {\n    Token t = fast_next_token(ts);\n    while (t.kind != TOK_EOF) { emit(t); t = fast_next_token(ts); }\n    return 0;\n}\n\nvoid free_lexer(Lexer* lx) {\n    free(lx);\n}" };
+$("ppl").value = "github | @demo_user | demo@example.com\ngit commit | Demo User | demo@example.com\ndiscuss.python.org | Demo User\ngithub | @fictional_dev | contributor@example.com\ndiscuss.python.org | Fictional Contributor";
+
+/* status */
+api("health").then(() => { $("status").className = "on"; $("status").textContent = "Local API online"; })
+  .catch(() => { $("status").textContent = "Local API offline: run npm start"; });
+
+/* 1. extract */
+document.querySelectorAll("[data-ex]").forEach(b => b.onclick = () => { $("thread").value = EX[b.dataset.ex]; $("result").innerHTML = ""; });
+let last = null;
+$("go").onclick = async () => {
+  const text = $("thread").value.trim(), out = $("result");
+  if (!text) { out.innerHTML = '<p class="del">Paste a discussion first, or load an example.</p>'; return; }
+  $("go").disabled = true; $("go").textContent = "Extracting…";
+  let r = null, a = {};
+  try { ({ result: r, anchor: a } = await api("extract", "POST", { text })); }
+  catch (e) { $("go").disabled = false; $("go").textContent = "Extract decision"; out.innerHTML = '<p class="del">Local API unreachable. Start it with <code>npm start</code>.</p>'; return; }
+  $("go").disabled = false; $("go").textContent = "Extract decision";
+  if (!r) { out.innerHTML = '<p class="del">No decision found. Look for wording like “decided”, “consensus”, “rejected” or “reverted because”.</p>'; return; }
+  last = { ...r, ...a };
+  out.innerHTML = `<div class="card">
+    <div class="diff a"><span class="k add">Decided</span> ${esc(r.decided) || "<small>none found</small>"}</div>
+    <div class="diff d"><span class="k del">Rejected</span> ${esc(r.rejected) || "<small>none found</small>"}</div>
+    <p style="margin:8px 0;color:var(--text)"><span class="k">Why</span> ${esc(r.why)}</p>
+    <p class="mono" style="margin:6px 0">“${esc(r.evidence)}”<br>
+    <span class="${r.verify.contiguous ? "add" : "del"}">${r.verify.contiguous ? "✓ contiguous match in source" : "✗ not a contiguous quote"}</span> · word overlap ${Math.round(r.verify.overlap * 100)}%${r.repaired ? " · model quote was invalid, replaced with a verified one" : ""}</p>
+    <small>Engine: ${esc(r.engine)}${r.refs.length ? " · refs " + r.refs.map(esc).join(", ") : ""}</small>
+    <h3 style="font-size:1rem;margin:16px 0 4px">Anchor to code</h3>
+    <div class="row"><div><label for="af">File</label><input id="af" value="${esc(a.file)}"></div><div><label for="as">Symbol</label><input id="as" value="${esc(a.symbol)}"></div>
+    <div><label for="a1">Start line</label><input id="a1" type="number" value="${esc(a.start)}"></div><div><label for="a2">End line</label><input id="a2" type="number" value="${esc(a.end)}"></div></div>
+    <button id="sv">Save to firewall</button> <span id="svm" class="add"></span></div>`;
+  $("sv").onclick = async () => {
+    const d = { ...last, id: Date.now(), file: $("af").value.trim(), symbol: $("as").value.trim(), start: +$("a1").value, end: +$("a2").value };
+    if (!d.file || !d.start || !d.end) { $("svm").className = "del"; $("svm").textContent = "Add a file and a line range."; return; }
+    await api("decisions", "POST", d); await refresh(); $("svm").className = "add"; $("svm").textContent = "Saved. Try it in the firewall below.";
+    $("pf").value = d.file; $("pl").value = d.start + Math.floor((d.end - d.start) / 2);
+    $("pt").value = "Revisit: " + d.rejected.slice(0, 60);
+  };
+};
+
+/* 2. firewall */
+function renderSaved() {
+  $("saved").innerHTML = store.length ? "<ul>" + store.map(d => `<li><code>${esc(d.file)}:${d.start}–${d.end}</code> ${d.symbol ? "<code>" + esc(d.symbol) + "()</code> " : ""}keep “${esc(d.decided)}”, rejected “${esc(d.rejected)}” <button class="ghost" data-del="${d.id}" style="padding:2px 8px">Remove</button></li>`).join("") + "</ul>"
+    : "<p>Nothing saved yet. Extract a decision above, or add the C parser decision.</p>";
+  document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => api("decisions/" + b.dataset.del, "DELETE").then(refresh));
+}
+$("seed").onclick = async () => { if (!store.some(d => d.id === 1)) await api("decisions", "POST", { id: 1, decided: "Keep the C parser", rejected: "Rust rewrite", why: "2x slower on big files compared to the C parser", file: "parser/core.c", symbol: "parse_token_stream", start: 40, end: 120, refs: ["#1832", "#1901"] }); refresh(); };
+$("check").onclick = async () => {
+  const r = await api("check", "POST", { title: $("pt").value, file: $("pf").value.trim(), line: $("pl").value });
+  const L = { block: ["🛑 Blocked: repeats a rejected approach", "block"], warn: ["⚠️ Touches a protected range, no rejected idea matched", "warn"], safe: ["✅ Safe: outside every protected range", "safe"] }[r.status];
+  $("verdict").innerHTML = `<div class="card"><span class="badge ${L[1]}">${L[0]}</span>` + r.hits.map(h => `<p style="color:var(--text);margin:10px 0 0">Anchor <code>${esc(h.d.symbol || h.d.file)}</code> (lines ${h.d.start}–${h.d.end}).
+    ${h.level === "block" ? `Matched <b>${h.matched.map(esc).join(", ")}</b>. <span class="mono">Tried before and rejected: “${esc(h.d.rejected)}”. Reason: ${esc(h.d.why)} ${h.d.refs.map(esc).join(" ")}</span>` : `Keep: ${esc(h.d.decided)}.`}</p>`).join("") + "</div>";
+};
+
+/* 3. relinker */
+$("rex").onclick = () => { $("orig").value = REL.o; $("next").value = REL.n; };
+$("rl").onclick = async () => {
+  const r = await api("relink", "POST", { original: $("orig").value, newFile: $("next").value }), out = $("rlout");
+  if (r.error) { out.innerHTML = `<p class="del">${esc(r.error)}</p>`; return; }
+  const p = x => (x * 100).toFixed(1) + "%", b = r.best;
+  out.innerHTML = `<div class="card"><span class="badge ${r.ok ? "safe" : "block"}">${r.ok ? "✅ Relink successful" : "✗ No confident match"}</span>
+    <p style="color:var(--text);margin:10px 0 0"><code>${esc(r.original)}()</code> → <code>${esc(b.name)}()</code>, lines ${b.startLine}–${b.endLine} (approximate span)</p>
+    <p class="mono" style="margin:6px 0">Confidence ${p(b.confidence)} (threshold ${p(r.threshold)}) · signature ${p(b.sig)} · body similarity ${p(b.seq)}</p>
+    ${r.others.length ? "<small>Runners-up: " + r.others.map(o => esc(o.name) + " " + p(o.confidence)).join(", ") + "</small>" : ""}</div>`;
+};
+
+/* 4. people */
+$("pp").onclick = async () => {
+  const g = await api("identities", "POST", { text: $("ppl").value });
+  $("ppout").innerHTML = g.length ? g.map(c => `<div class="card"><b>${esc(c.name)}</b> <small>${c.aliases.length} aliases</small><br><span class="mono">${c.aliases.map(esc).join(" · ")}</span></div>`).join("") : "<p>Add at least one line.</p>";
+};
+refresh().catch(() => {});
+</script>
+</body>
+</html>
